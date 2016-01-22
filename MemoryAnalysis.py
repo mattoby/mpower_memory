@@ -30,7 +30,6 @@ data = data[data.phoneInfo.isin(goodphones)]
 print "(phones are now filtered for only the most popular ones)"
 
 
-
 # sklearn:
 from sklearn import linear_model
 import sklearn.linear_model
@@ -63,12 +62,38 @@ def transform_feature( df, column_name ):
     df[column_name] = df[column_name].apply( label_map )
     return df
 
+# from: https://civisanalytics.com/blog/data-science/2015/12/23/workflows-in-python-curating-features-and-thinking-scientifically-about-algorithms/
+import sklearn.preprocessing
+def hot_encoder(df, column_name):
+    column = df[column_name].tolist()
+    column = np.reshape( column, (len(column), 1) )  ### needs to be an N x 1 numpy array
+    enc = sklearn.preprocessing.OneHotEncoder()
+    enc.fit( column )
+    new_column = enc.transform( column ).toarray()
+    column_titles = []
+    ### making titles for the new columns, and appending them to dataframe
+    for ii in range( len(new_column[0]) ):
+        this_column_name = column_name+"_"+str(ii)
+        df[this_column_name] = new_column[:,ii]
+    return df
+
+
+# features_df.isnull().sum() # looks at the nulls in each col
+#education - 8 nans
+#employment - 19 nans
+#gender - 5 nans
+#lastSmoked - >5000 nans
+#maritalStatus - 18 nans
+#phoneUsage - 6 nans
+#smartphone - 5 nans
+# age - 15 nans
 
 
 features_df = data[["game_score","phoneInfo",
     "game_numFails","age","brainStim","education",
-    "employment","gender","lastSmoked","maritalStatus",
-    "phoneUsage", "smartphone"]]
+    "employment","gender","maritalStatus",
+    "phoneUsage", "smartphone", "hasParkinsons"]]
+
 names_of_columns_to_transform = ["phoneInfo",
     "brainStim","education","employment",
     "gender","maritalStatus",
@@ -80,7 +105,30 @@ for column in names_of_columns_to_transform:
 
 print( features_df.head() )
 
+# drop nas:
+# notnanrows = np.where(features_df['age'].notnull())[0]
+features_df = features_df.dropna()
 
+y = features_df['hasParkinsons'].astype('int').tolist()
+features_df = features_df.drop('hasParkinsons',1)
+X = features_df.as_matrix()
+
+
+clf1 = linear_model.LogisticRegression()
+score1 = sklearn.cross_validation.cross_val_score( clf1, X, y )
+print( score1 )
+
+import sklearn.tree
+import sklearn.ensemble
+​
+
+clf2 = sklearn.tree.DecisionTreeClassifier()
+score2 = sklearn.cross_validation.cross_val_score( clf2, X, y )
+print( score2 )
+​
+clf3 = sklearn.ensemble.RandomForestClassifier()
+score3 = sklearn.cross_validation.cross_val_score( clf3, X, y )
+print( score3 )
 
 
 

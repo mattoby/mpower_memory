@@ -81,7 +81,6 @@ def load_memory_results_json(filePaths, game_record_txt):
     return game_record
 
 
-
 # create the whole environment for the memory data:
 # (this is the last setup function, which folds in the others)
 def create_memory_environment(synapse_user, synapse_pass):
