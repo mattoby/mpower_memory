@@ -82,6 +82,41 @@ def load_memory_results_json(filePaths, game_record_txt):
 
 
 
+# create the whole environment for the memory data:
+# (this is the last setup function, which folds in the others)
+def create_memory_environment(synapse_user, synapse_pass):
+
+    syn = login_synapse(synapse_user, synapse_pass)
+    memory, memorysyn = load_memory_table_from_synapse(syn)
+    filePaths = load_memory_game_results_from_synapse(syn, memorysyn)
+    demographics, demosyn = load_demographics_table_from_synapse(syn)
+
+    ## join dataframes:
+    def has_parkinsons(data):
+        hasdiagyear = ~np.isnan(data.diagYear)
+        hasprofessionalDiagnosis = data.professionalDiagnosis == True
+        hasParkinsons = hasdiagyear | hasprofessionalDiagnosis
+        return hasParkinsons
+    data = pd.merge(left=memory, right=demographics, how='inner', left_on='healthCode', right_on='healthCode')
+    data['hasParkinsons'] = has_parkinsons(data)
+
+    return syn, memory, memorysyn, filePaths, demographics, demosyn, data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

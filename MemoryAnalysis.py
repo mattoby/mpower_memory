@@ -1,6 +1,5 @@
 # this file is where i'm playing with new methods..
 
-
 import synapseclient
 from synapseclient import Project, Folder, File
 import pandas as pd
@@ -13,22 +12,96 @@ import numpy as np
 import os
 import memorytools as mt
 # from pandas import DataFrame, Series
-%pylab # if running in ipython... (so i can see plots)
+# if running in ipython... (so i can see plots)
+%pylab
 
-## load up data:
-syn = mt.login_synapse(os.environ['SYNAPSE_USER'], os.environ['SYNAPSE_PASS'])
-memory, memorysyn = mt.load_memory_table_from_synapse(syn)
-filePaths = mt.load_memory_game_results_from_synapse(syn, memorysyn)
-demographics, demosyn = mt.load_demographics_table_from_synapse(syn)
+# initialize environment:
+synuser = os.environ['SYNAPSE_USER']
+synpass = os.environ['SYNAPSE_PASS']
+syn, memory, memorysyn, filePaths, demographics, demosyn, data = mt.create_memory_environment(synuser, synpass)
 
-## join dataframes:
-data = pd.merge(left=memory, right=demographics, how='inner', left_on='healthCode', right_on='healthCode')
+
+# Filter out all but the most popular 3 phones:
+#d2 = data[]
+numuserscutoff = 1000
+phonegroups = data.groupby('phoneInfo').size()
+goodphones = phonegroups[phonegroups > numuserscutoff].index
+data = data[data.phoneInfo.isin(goodphones)]
+print "(phones are now filtered for only the most popular ones)"
+
+
+
+# sklearn:
+from sklearn import linear_model
+import sklearn.linear_model
+import sklearn.cross_validation
+import numpy as np
+from sklearn.utils.validation import check_consistent_length, _num_samples
+
+features = ['game_score','game_numGames'] # cannot have just 1 feature
+X = data[features]
+
+Y = data['hasParkinsons'].astype('int')
+
+logr = linear_model.LogisticRegression()
+
+logr.fit( X , Y )
+
+
+# For scikit-learn part:
+
+# transform categorical features
+# from https://civisanalytics.com/blog/data-science/2015/12/17/workflows-in-python-getting-data-ready-to-build-models/
+def transform_feature( df, column_name ):
+    unique_values = set( df[column_name].tolist() )
+    transformer_dict = {}
+    for ii, value in enumerate(unique_values):
+        transformer_dict[value] = ii
+
+    def label_map(y):
+        return transformer_dict[y]
+    df[column_name] = df[column_name].apply( label_map )
+    return df
+
+
+
+features_df = data[["game_score","phoneInfo",
+    "game_numFails","age","brainStim","education",
+    "employment","gender","lastSmoked","maritalStatus",
+    "phoneUsage", "smartphone"]]
+names_of_columns_to_transform = ["phoneInfo",
+    "brainStim","education","employment",
+    "gender","maritalStatus",
+    "phoneUsage", "smartphone"]
+# diagYear... onsetYear
+
+for column in names_of_columns_to_transform:
+    features_df = transform_feature( features_df, column )
+
+print( features_df.head() )
+
+
+
+
+
+
+
+
+
+
+
+#def get_features_from_game_record(recordId, data)
 
 # load a single game record (for now..)
-game_record = load_memory_results_json(filePaths, memory.game_records_txt[0])
+recordtoget = data[data['recordId']=='5a0b4204-8a6c-430f-be93-c5aa2d6c9e33']
+#game_record = mt.load_memory_results_json(filePaths, data.game_records_txt[0])
+game_record = mt.load_memory_results_json(filePaths, recordtoget.game_records_txt[0])
+
+
 
 # get just one game to play with:
 game = game_record[0]
+game.keys()
 
 # represent the memory squares graphically:
 rects = game['MemoryGameRecordTargetRects']
