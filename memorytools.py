@@ -14,15 +14,28 @@ import numpy as np
 import os
 
 
-# log in
+
 def login_synapse(username, password):
+    '''
+    Log into Synapse.
+
+    For example,
+    >>> login_synapse(bla, bla)
+    5
+
+    :param str username: the first number
+    :param int b: the second number
+    :returns: the syn structure logged in as user
+    '''
     syn = synapseclient.Synapse()
     syn.login(username, password) # need to change this, security.
     return syn
 
 
-# get the memory table up and running:
 def load_memory_table_from_synapse(syn):
+    '''
+    Get the memory table up and running:
+    '''
     memorysyn = syn.tableQuery("select * from %s" % 'syn5511434')
     memory = memorysyn.asDataFrame()
 
