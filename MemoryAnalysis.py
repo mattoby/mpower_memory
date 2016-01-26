@@ -33,23 +33,26 @@ data = mt.filter_data_for_popular_phones(data)
 memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
 
 
+for memrecordId in data['recordId']:
+    avg_features_by_sizes = form_features_from_memory_record(filePaths, data, memrecordId)
 
 
-def form_features_from_memory_game_data(filePaths, data):
-    '''
-    This does the full pipeline, of pulling features out of
-    the memory game data, splitting them into game size groups,
-    and then determining averaged features for each group that
-    can be added to the data object as new feature columns
-    '''
 
-    for memrecordId in data['recordId']:
-        # pull out games:
-        games = extract_games_from_memory_record(filePaths, data, memrecordId)
-        games_by_sizes = group_games_by_sizes(games)
-        memory_features = extract_features_from_games(games)
 
-    pass
+
+#!# FINISH!
+
+
+# get just one game to play with:
+game = games_from_record[0]
+
+
+
+
+
+
+
+
 
 ## split games into size bins:
 #def extract_games_sizes(games):
@@ -57,62 +60,6 @@ def form_features_from_memory_game_data(filePaths, data):
 #        gamesize
 ## split to the different game sizes:
 #games[1]['MemoryGameRecordGameSize']
-
-def group_games_by_sizes(games):
-    '''
-    Group 'games' from record into groups, one per allowed gamesize
-    This will be output as a list
-    '''
-
-    allowedgamesizes = set([4, 9, 16])
-    gamesizes = []
-    for game in games:
-        gamesizes.append(game['MemoryGameRecordGameSize'])
-    assert set(gamesize).issubset(allowedgamesizes), 'not all of the gamesizes are accounted for. allowedgamesizes=%s, and gamesizes=%s. Add more to the allowed game sizes, or errorcheck.' % (allowedgamesizes, gamesizes)
-
-    # group together games of the given gamesize:
-    games_by_sizes = [None]*len(allowedgamesizes)
-    for game in games:
-
-        games_by_size[ind] = games[gamesizes = gamesize]
-
-            out
-
-    games[]
-[main_list[x] for x in indexes]
-
-    return gamesizes
-
-#!# FINISH!
-def avg_features_from_memory_games(games_from_record, gamesize):
-    '''
-    pulls features out of a set of games
-    (i.e., from one record of the memory table)
-    '''
-    memory_features_combined = []
-    for game in games_from_record:
-        memory_features = mt.pull_features_from_memory_game(game)
-        for key, val in memory_features:
-            out
-
-
-
-    return memory_features_combined
-
-
-
-# get just one game to play with:
-game = games_from_record[0]
-
-
-    # outputs:
-def combine_memory_games_per_record(memory_features):
-    pass
-    return memory_features_combined
-
-
-
-
 
 
 

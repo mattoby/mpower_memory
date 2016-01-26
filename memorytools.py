@@ -283,6 +283,81 @@ def extract_games_from_memory_record(filePaths, data, memrecordId):
     return games_from_record
 
 
+def group_games_by_sizes(games):
+    '''
+    Group 'games' from record into groups, one per allowed gamesize
+    This will be output as a dict, where keys are the gamesizes,
+    and each value is a list of outputs of all games with that size.
+    '''
+    allowedgamesizes = np.array([4, 9, 16])
+
+    gamesizes = []
+    for game in games:
+        gamesizes.append(game['MemoryGameRecordGameSize'])
+
+    assert set(gamesizes).issubset(set(allowedgamesizes)), 'not all of the gamesizes are accounted for. allowedgamesizes=%s, and gamesizes=%s. Add more to the allowed game sizes, or errorcheck.' % (allowedgamesizes, gamesizes)
+
+    # create dict to hold games grouped by sizes:
+    games_by_sizes = {}
+    for allowedsize in allowedgamesizes:
+        games_by_sizes[allowedsize] = []
+
+    # group together games of the given gamesize:
+#    games_by_sizes = [None]*len(allowedgamesizes)
+    for ind, game in enumerate(games):
+        gamesize = gamesizes[ind]
+#        allowedind = np.where(allowedgamesizes == gamesize)[0][0]
+        games_by_sizes[gamesize].append(game)
+
+    return games_by_sizes #, allowedgamesizes
+
+
+def average_features_from_memory_games(games):
+    '''
+    pulls features out of a set of games
+    (i.e., from one record of the memory table)
+    '''
+    # add assert that game sizes are all the same!
+
+    all_memory_features = {}
+    for game in games:
+        memory_features = mt.pull_features_from_memory_game(game)
+        for feature in memory_features:
+#            print feature
+            if all_memory_features.has_key(feature):
+                all_memory_features[feature].append(memory_features[feature])
+            else:
+                all_memory_features[feature] = [memory_features[feature]]
+
+    avg_memory_features = {}
+    for feature in all_memory_features:
+        avg_memory_features[feature] = mean(all_memory_features[feature])
+
+    return avg_memory_features # , all_memory_features
+
+
+def form_features_from_memory_record(filePaths, data, memrecordId):
+    '''
+    This does the full pipeline for a single memory table record:
+    splits them into game size groups, & determines averaged
+    features for each group
+    '''
+        # pull out games:
+    games = extract_games_from_memory_record(filePaths, data, memrecordId)
+    games_by_sizes = group_games_by_sizes(games)
+
+        # split them up by game sizes:
+    avg_features_by_sizes = {}
+    for gamesize in games_by_sizes:
+        games = games_by_sizes[gamesize]
+        if len(games) > 0:
+            avg_memory_features = average_features_from_memory_games(games)
+            avg_features_by_sizes[gamesize] = avg_memory_features
+#            else
+#                memory_features_by_sizes[gamesize] = []
+    return avg_features_by_sizes
+
+
 ###############
 ## Old/other ##
 ###############
