@@ -31,37 +31,59 @@ data = mt.filter_data_for_popular_phones(data)
 # load a single game record (for now..)
 
 memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
-games = extract_games_from_memory_record(filePaths, data, memrecordId)
-# split games into size bins:
-def extract_games_sizes(games):
-    for game in games:
-        gamesize
 
 
-# split to the different game sizes:
-games[1]['MemoryGameRecordGameSize']
 
-def extract_features_from_memory_game_data(filePaths, data):
+
+def form_features_from_memory_game_data(filePaths, data):
+    '''
+    This does the full pipeline, of pulling features out of
+    the memory game data, splitting them into game size groups,
+    and then determining averaged features for each group that
+    can be added to the data object as new feature columns
+    '''
+
     for memrecordId in data['recordId']:
+        # pull out games:
         games = extract_games_from_memory_record(filePaths, data, memrecordId)
         games_by_sizes = group_games_by_sizes(games)
         memory_features = extract_features_from_games(games)
 
     pass
 
+## split games into size bins:
+#def extract_games_sizes(games):
+#    for game in games:
+#        gamesize
+## split to the different game sizes:
+#games[1]['MemoryGameRecordGameSize']
 
-def extract_games_from_memory_record(filePaths, data, memrecordId):
+def group_games_by_sizes(games):
     '''
-    pulls games out of a single record of the memory table
-    reference by recordId from the memory table
+    Group 'games' from record into groups, one per allowed gamesize
+    This will be output as a list
     '''
-    recordtoget = data[data['recordId']==memrecordId]
-    record_Id = data.game_records_txt[0]
-    game_record = mt.load_memory_results_json(filePaths, record_Id)
-    games_from_record = mt.load_memory_results_json(filePaths, recordtoget.game_records_txt[0])
-    return games_from_record
 
+    allowedgamesizes = set([4, 9, 16])
+    gamesizes = []
+    for game in games:
+        gamesizes.append(game['MemoryGameRecordGameSize'])
+    assert set(gamesize).issubset(allowedgamesizes), 'not all of the gamesizes are accounted for. allowedgamesizes=%s, and gamesizes=%s. Add more to the allowed game sizes, or errorcheck.' % (allowedgamesizes, gamesizes)
 
+    # group together games of the given gamesize:
+    games_by_sizes = [None]*len(allowedgamesizes)
+    for game in games:
+
+        games_by_size[ind] = games[gamesizes = gamesize]
+
+            out
+
+    games[]
+[main_list[x] for x in indexes]
+
+    return gamesizes
+
+#!# FINISH!
 def avg_features_from_memory_games(games_from_record, gamesize):
     '''
     pulls features out of a set of games

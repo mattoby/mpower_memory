@@ -270,6 +270,19 @@ def pull_features_from_memory_game(game):
     return memory_features#, memory_features_uncondensed
 
 
+def extract_games_from_memory_record(filePaths, data, memrecordId):
+    '''
+    pulls games out of a single record of the memory table
+    reference by recordId from the memory table
+    '''
+    recordtoget = data[data['recordId']==memrecordId]
+#    record_Id = data.game_records_txt[0]
+#    game_record = mt.load_memory_results_json(filePaths, record_Id)
+    record_Id = recordtoget.game_records_txt[0]
+    games_from_record = mt.load_memory_results_json(filePaths, record_Id)
+    return games_from_record
+
+
 ###############
 ## Old/other ##
 ###############
