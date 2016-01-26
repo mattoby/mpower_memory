@@ -30,14 +30,19 @@ data = mt.filter_data_for_popular_phones(data)
 #def get_features_from_game_record(recordId, data)
 
 # load a single game record (for now..)
-
 #record = data[data['recordId']==memrecordId]
 
 #def create_feature_columns_from_memory_game
-for memrecordId in data['recordId']:
-    print memrecordId
-    avg_features_by_sizes = mt.form_features_from_memory_record(filePaths, data, memrecordId)
+prep_data_columns
 
+for memrecordId in data['recordId']:
+    avg_features_by_sizes = mt.form_features_from_memory_record(filePaths, data, memrecordId)
+    # put features into data structure:
+    for gamesize in mt.allowedgamesizes:
+        features_within_gamesize = avg_features_by_sizes[gamesize]
+        for feature in features_within_gamesize
+
+    data
 
 
 

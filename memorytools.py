@@ -301,10 +301,9 @@ def pull_features_from_memory_game(game):
     memory_features['meanunsuccessfuldist'] = np.mean(unsuccessdists)
     memory_features['numsuccesses'] =  np.sum(np.array(successes))
     memory_features['numunsuccesses'] =  np.sum(~np.array(successes))
-
-    print memory_features
-
-    return memory_features#, memory_features_uncondensed
+#    featurenames = memory_features.keys()
+#    print memory_features
+    return memory_features #, memory_features_uncondensed
 
 
 def extract_games_from_memory_record(filePaths, data, memrecordId):
@@ -322,13 +321,15 @@ def extract_games_from_memory_record(filePaths, data, memrecordId):
     return games_from_record
 
 
-def group_games_by_sizes(games):
+allowedgamesizes = np.array([4, 9, 16])
+
+def group_games_by_sizes(games, allowedgamesizes):
     '''
     Group 'games' from record into groups, one per allowed gamesize
     This will be output as a dict, where keys are the gamesizes,
     and each value is a list of outputs of all games with that size.
     '''
-    allowedgamesizes = np.array([4, 9, 16])
+    #allowedgamesizes = np.array([4, 9, 16])
 
     gamesizes = []
     for game in games:
@@ -413,6 +414,7 @@ def filter_out_broken_games(games):
     games = [games[i] for i in range(len(games)) if brokengametag[i]==False]
 
     return games
+
 
 
 ###############
