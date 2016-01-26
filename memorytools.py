@@ -77,9 +77,9 @@ def load_demographics_table_from_synapse(syn):
     # finish:
     return demographics, demosyn
 
-
+loadSynapseRecordsFromScratch = False
 # get the json files (slow, only load from scratch once):
-def load_memory_game_results_from_synapse(syn, memorysyn, fromScratch = False):
+def load_memory_game_results_from_synapse(syn, memorysyn, fromScratch = loadSynapseRecordsFromScratch):
     if fromScratch:
         filePaths = syn.downloadTableColumns(memorysyn, u'MemoryGameResults.json.MemoryGameGameRecords')
         pickle.dump( filePaths, open( "filePaths_for_memory.p", "wb" ) )
@@ -152,7 +152,7 @@ def dictstring_to_nums(dictstring):
 
 
 def pull_features_from_memory_game(game):
-    print game
+#    print game
 
     '''
     Main function to pull features out of memory game records.
@@ -203,7 +203,7 @@ def pull_features_from_memory_game(game):
         for ts in touchsamples:
             memdists.append(memorydist(ts, rectlocations))
 
-        print 'memdists = %s' % memdists
+#        print 'memdists = %s' % memdists
 
         firstdist = memdists[0]
         meandist = np.mean(memdists) # does this make sense?
@@ -273,7 +273,7 @@ def pull_features_from_memory_game(game):
     # game score:
     gamescore = game['MemoryGameRecordGameScore']
 
-    print 'gamesize=%s' % gamesize
+#    print 'gamesize=%s' % gamesize
 
     # group dists into success & non-success categories:
     successdists = [memdists[i] for i in range(len(memdists)) if successes[i]]
@@ -314,16 +314,16 @@ def extract_games_from_memory_record(filePaths, data, memrecordId):
     recordtoget = data[data['recordId']==memrecordId]
 #    record_Id = data.game_records_txt[0]
 #    game_record = load_memory_results_json(filePaths, record_Id)
-    print recordtoget.game_records_txt
+#    print recordtoget.game_records_txt
     record_Id = recordtoget.game_records_txt.values[0]
-    print record_Id
+    print 'Extracting games record from record_Id = %s' % memrecordId
     games_from_record = load_memory_results_json(filePaths, record_Id)
     return games_from_record
 
 
 allowedgamesizes = np.array([4, 9, 16])
 
-def group_games_by_sizes(games, allowedgamesizes):
+def group_games_by_sizes(games, allowedgamesizes=allowedgamesizes):
     '''
     Group 'games' from record into groups, one per allowed gamesize
     This will be output as a dict, where keys are the gamesizes,
@@ -414,6 +414,38 @@ def filter_out_broken_games(games):
     games = [games[i] for i in range(len(games)) if brokengametag[i]==False]
 
     return games
+
+
+def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedgamesizes, fromFile=True, outFileName='memory_data_with_features.p', toSave=False):
+    '''
+    Master function that goes through records in 'data' (the merged memory & demographics dataframe), pulls out features from the memory game
+    Note: if fromScratch=False, then the data & filepaths are ignored, and pre-processed data is imported from savefilename. Otherwise, it is saved
+
+    '''
+    if not(fromFile):
+        for memrecordId in data['recordId']:
+            rowidx = data[data['recordId']==memrecordId].index.tolist()
+            print 'Adding features to row: %s' % rowidx[0]
+            avg_features_by_sizes = form_features_from_memory_record(filePaths, data, memrecordId, allowedgamesizes)
+            # put features into data structure:
+            for gamesize in avg_features_by_sizes:
+#                print 'avg_features_by_sizes = %s' % avg_features_by_sizes
+                features_within_gamesize = avg_features_by_sizes[gamesize]
+
+                for feature in features_within_gamesize:
+                    colname = '%s_%s' % (gamesize, feature)
+                    featureval = features_within_gamesize[feature]
+
+                    data.set_value(rowidx, colname, featureval)
+        print 'memory features extracted from inputted data'
+    else:
+        data = pickle.load( open( outFileName, "rb" ) )
+        print 'memory features loaded from file: %s (input data was ignored)' % outFileName
+    if toSave:
+        pickle.dump( data, open( outFileName, "wb" ) )
+        print 'memory features saved to file: %s' % outFileName
+
+    return data
 
 
 

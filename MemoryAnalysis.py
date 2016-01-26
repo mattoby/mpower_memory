@@ -18,52 +18,29 @@ import memorytools as mt
 %load_ext autoreload
 # %autoreload 2 # this will reload all modules
 
+
+#############
+## startup ##
+#############
+
 # initialize environment:
 synuser = os.environ['SYNAPSE_USER']
 synpass = os.environ['SYNAPSE_PASS']
+mt.loadSynapseRecordsFromScratch = False
 syn, memory, memorysyn, filePaths, demographics, demosyn, data = mt.create_memory_environment(synuser, synpass)
 data = mt.filter_data_for_popular_phones(data)
+# pull out features from games:
+data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=True, toSave=False, outFileName='memory_data_with_features.p')
 
-####################################
-### pull out features from games ###
-####################################
-#def get_features_from_game_record(recordId, data)
-
-# load a single game record (for now..)
-#record = data[data['recordId']==memrecordId]
-
-#def create_feature_columns_from_memory_game
-prep_data_columns
-
-for memrecordId in data['recordId']:
-    avg_features_by_sizes = mt.form_features_from_memory_record(filePaths, data, memrecordId, mt.allowedgamesizes)
-    # put features into data structure:
-    for gamesize in mt.allowedgamesizes:
-        print 'avg_featues_by_sizes = %s' % avg_features_by_sizes
-
-        # check if the current record includes the given gamesize:
-        if gamesize in avg_features_by_sizes:
-            features_within_gamesize = avg_features_by_sizes[gamesize]
-        else:
-
-        for feature in features_within_gamesize:
-            colname = '%s_%s' % (gamesize, feature)
-            featureval = features_within_gamesize[feature]
-            data.loc[memrecordId, colname] = featureval
-
-#            features_within_gamesize[feature]
-
-#data.loc[memrecordId, colname] = featureval
+####################
+## model building ##
+####################
 
 
 
-# problem: 0d313fd2-d798-4d09-8c21-b632c5ef454b'
 
 # get just one game to play with:
 # game = games_from_record[0]
-
-
-
 
 
 
