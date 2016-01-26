@@ -376,7 +376,7 @@ def average_features_from_memory_games(games):
     return avg_memory_features # , all_memory_features
 
 
-def form_features_from_memory_record(filePaths, data, memrecordId):
+def form_features_from_memory_record(filePaths, data, memrecordId, allowedgamesizes):
     '''
     This does the full pipeline for a single memory table record:
     splits them into game size groups, & determines averaged
@@ -385,7 +385,7 @@ def form_features_from_memory_record(filePaths, data, memrecordId):
         # pull out games:
     games = extract_games_from_memory_record(filePaths, data, memrecordId)
     games = filter_out_broken_games(games)
-    games_by_sizes = group_games_by_sizes(games)
+    games_by_sizes = group_games_by_sizes(games, allowedgamesizes)
 
         # split them up by game sizes:
     avg_features_by_sizes = {}
