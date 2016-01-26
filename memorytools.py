@@ -13,7 +13,9 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 
-
+###############################
+## Pulling data from synapse ##
+###############################
 
 def login_synapse(username, password):
     '''
@@ -112,17 +114,189 @@ def create_memory_environment(synapse_user, synapse_pass):
     data = pd.merge(left=memory, right=demographics, how='inner', left_on='healthCode', right_on='healthCode')
     data['hasParkinsons'] = has_parkinsons(data)
 
+    ## check dataset:
+    assert len(data['recordId']) == len(data), 'Memory test record Ids should be unique, but they aren''t -- check the data structure.'
+
     return syn, memory, memorysyn, filePaths, demographics, demosyn, data
 
 
+#####################
+## Filter the data ##
+#####################
+
+def filter_data_for_popular_phones(data):
+    '''
+    only include the phones with a lot of records
+    '''
+    numuserscutoff = 1000
+    phonegroups = data.groupby('phoneInfo').size()
+    goodphones = phonegroups[phonegroups > numuserscutoff].index
+    data = data[data.phoneInfo.isin(goodphones)]
+    print "(phones are now filtered for only the most popular ones)"
+    return data
 
 
+#######################################
+## Get features from the memory game ##
+#######################################
+
+def dictstring_to_nums(dictstring):
+    '''
+    takes a string, like u'{216.33, 267.33}' or
+    u'{{36, 199}, {114, 114}}', and converts to a
+    list of floats.
+    '''
+    nums = re.findall('[\d\.]+', dictstring)
+    nums = [float(num) for num in nums]
+    return nums
 
 
+def pull_features_from_memory_game(game):
+    '''
+    Main function to pull features out of memory game records.
+    '''
+    def rect_locations(game):
+        '''
+        returns x_ctr, y_ctr, radius for each patch in memory game
+        (each row is a patch)
+        '''
+        rawrects = game['MemoryGameRecordTargetRects']
+        rectlocations = []
+        for rect in rawrects:
+            rectloc = dictstring_to_nums(rect)
+            x = rectloc[0] # bottom left x
+            y = rectloc[1] # bottom left y
+            dx = rectloc[2]/2.0 # dist to center, x-axis
+            dy = rectloc[3]/2.0 # dist to center, y-axis
+            assert dx == dy, 'game patches aren''t squares. height=%s, width=%s. check' % (dy, dx)
+            radius = np.mean((dx,dy))
+            x_ctr = x + dx
+            y_ctr = y + dy
+            rectlocations.append([x_ctr, y_ctr, radius])
+        return rectlocations
+
+    def memorydist(ts, rectlocations):
+        '''
+        outputs the distance from correct patch center to where player touched.
+        ts is a single touch sample from one memory game.
+        row of ts['..TargetIndex'] corresponds to row ind from rectlocations.
+        '''
+        hitlocraw = ts['MemoryGameTouchSampleLocation']
+        hitloc = dictstring_to_nums(hitlocraw) # hitloc = [x, y]
+        trueind = ts['MemoryGameTouchSampleTargetIndex'] # index from 0
+        trueloc = rectlocations[trueind]
+        x_true = trueloc[0]
+        y_true = trueloc[1]
+        x_hit = hitloc[0]
+        y_hit = hitloc[1]
+        memdist = np.sqrt((x_true - x_hit)**2 + (y_true - y_hit)**2)
+        return memdist
+
+    def memorydists(touchsamples, rectlocations):
+        '''
+        pulls distance information from touchsamples from 1 game
+        (calls memorydist)
+        '''
+        memdists = []
+        for ts in touchsamples:
+            memdists.append(memorydist(ts, rectlocations))
+        firstdist = memdists[0]
+        meandist = np.mean(memdists[1:]) # does this make sense?
+
+        return firstdist, meandist, memdists
+
+    def memorytimes(touchsamples):
+        '''
+        takes in all touchsamples, and outputs the time delay for each
+        '''
+        touchtimes = []
+        touchDtimes = []
+        for ind, ts in enumerate(touchsamples):
+            touchtimes.append(ts['MemoryGameTouchSampleTimestamp'])
+            if ind == 0:
+                touchDtimes.append(touchtimes[ind])
+            else:
+                touchDtimes.append(touchtimes[ind] - touchtimes[ind - 1])
+
+        latency = touchDtimes[0] # the wait before first touch
+        meanDt = np.mean(touchDtimes[1:]) # the mean wait between the next touches
+        return latency, meanDt, touchDtimes #, touchtimes
+
+    def memorysuccesses(touchsamples):
+        '''
+        returns success status of each touch sample
+        '''
+        successes = []
+        for ts in touchsamples:
+            successes.append(ts['MemoryGameTouchSampleIsCorrect'])
+        successful = all(successes)
+        return successful, successes
+
+    # main function actions:
+
+    # define rectangle location centers & touch samples:
+    touchsamples = game['MemoryGameRecordTouchSamples']
+    rectlocations = rect_locations(game)
+
+    # find distances:
+    firstdist, meandist, memdists = memorydists(touchsamples, rectlocations)
+     # find times:
+    latency, meanDt, touchDtimes = memorytimes(touchsamples)
+    # find successes:
+    successful, successes = memorysuccesses(touchsamples)
+    assert successes[-2] == True, 'the second to last success is not true, it should always be!'
+    # game board size (larger = harder! analyze separately!):
+    gamesize = game['MemoryGameRecordGameSize']
+    # game score:
+    gamescore = game['MemoryGameRecordGameScore']
+
+    # pack outputs:
+
+    # distances, times, etc. condensed into single stats per game
+    memory_features = {}
+    memory_features['firstdist'] = firstdist
+    memory_features['meandist'] = meandist
+    memory_features['latency'] = latency
+    memory_features['meanDt'] = meanDt
+    memory_features['successful'] = successful
+    memory_features['gamesize'] = gamesize
+    memory_features['gamescore'] = gamescore
+
+    # distances, etc. in uncondensed form (1 ind per touch sample)
+    memory_features_uncondensed = {}
+    memory_features_uncondensed['memdists'] =memdists
+    memory_features_uncondensed['successes'] = successes
+
+    return memory_features#, memory_features_uncondensed
 
 
+###############
+## Old/other ##
+###############
 
-
+## represent the memory squares graphically:
+#rects = game['MemoryGameRecordTargetRects']
+#rects_as_nums = []
+#for rect in rects:
+#    r = re.findall('\d+', rect)
+#    r = [float(num) for num in r]
+#    rects_as_nums.append(r)
+#rects = rects_as_nums
+#
+## convert_squares_to_patch
+#rect = rects[0]
+#fig1 = plt.figure()
+#ax1 = fig1.add_subplot(111, aspect='equal')
+#ax1.add_patch(patches.Rectangle((rect[0], rect[1]),   # (x,y)
+#        rect[2],          # width
+#        rect[3],          # height
+#    )
+#)
+#
+#points = [[2, 1], [8, 1], [8, 4]]
+#polygon = plt.Polygon(points)
+#points = [[2, 4], [2, 8], [4, 6], [6, 8]]
+#line = plt.Polygon(points, closed=None, fill=None, edgecolor='r')
 
 
 

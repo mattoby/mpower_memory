@@ -14,19 +14,95 @@ import memorytools as mt
 # from pandas import DataFrame, Series
 # if running in ipython... (so i can see plots)
 %pylab
+%load_ext autoreload # for reloading modules
+# %autoreload 2 # this will reload all modules
 
 # initialize environment:
 synuser = os.environ['SYNAPSE_USER']
 synpass = os.environ['SYNAPSE_PASS']
 syn, memory, memorysyn, filePaths, demographics, demosyn, data = mt.create_memory_environment(synuser, synpass)
+data = mt.filter_data_for_popular_phones(data)
 
-# Filter out all but the most popular 3 phones:
-#d2 = data[]
-numuserscutoff = 1000
-phonegroups = data.groupby('phoneInfo').size()
-goodphones = phonegroups[phonegroups > numuserscutoff].index
-data = data[data.phoneInfo.isin(goodphones)]
-print "(phones are now filtered for only the most popular ones)"
+####################################
+### pull out features from games ###
+####################################
+#def get_features_from_game_record(recordId, data)
+
+# load a single game record (for now..)
+
+memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
+games = extract_games_from_memory_record(filePaths, data, memrecordId)
+# split games into size bins:
+def extract_games_sizes(games):
+    for game in games:
+        gamesize
+
+
+# split to the different game sizes:
+games[1]['MemoryGameRecordGameSize']
+
+def extract_features_from_memory_game_data(filePaths, data):
+    for memrecordId in data['recordId']:
+        games = extract_games_from_memory_record(filePaths, data, memrecordId)
+        games_by_sizes = group_games_by_sizes(games)
+        memory_features = extract_features_from_games(games)
+
+    pass
+
+
+def extract_games_from_memory_record(filePaths, data, memrecordId):
+    '''
+    pulls games out of a single record of the memory table
+    reference by recordId from the memory table
+    '''
+    recordtoget = data[data['recordId']==memrecordId]
+    record_Id = data.game_records_txt[0]
+    game_record = mt.load_memory_results_json(filePaths, record_Id)
+    games_from_record = mt.load_memory_results_json(filePaths, recordtoget.game_records_txt[0])
+    return games_from_record
+
+
+def avg_features_from_memory_games(games_from_record, gamesize):
+    '''
+    pulls features out of a set of games
+    (i.e., from one record of the memory table)
+    '''
+    memory_features_combined = []
+    for game in games_from_record:
+        memory_features = mt.pull_features_from_memory_game(game)
+        for key, val in memory_features:
+            out
+
+
+
+    return memory_features_combined
+
+
+
+# get just one game to play with:
+game = games_from_record[0]
+
+
+    # outputs:
+def combine_memory_games_per_record(memory_features):
+    pass
+    return memory_features_combined
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # sklearn:
 from sklearn import linear_model
@@ -300,148 +376,24 @@ Z = logreg.predict(np.c_[xx.ravel(), yy.ravel()])
 
 
 
-
-
-#def get_features_from_game_record(recordId, data)
-
-# load a single game record (for now..)
-recordtoget = data[data['recordId']=='5a0b4204-8a6c-430f-be93-c5aa2d6c9e33']
-#game_record = mt.load_memory_results_json(filePaths, data.game_records_txt[0])
-game_record = mt.load_memory_results_json(filePaths, recordtoget.game_records_txt[0])
-
-
-
-# get just one game to play with:
-game = game_record[0]
-game.keys()
-
-
-
-def dictstring_to_nums(dictstring):
-    '''
-    takes a string, like u'{216.33, 267.33}' or
-    u'{{36, 199}, {114, 114}}', and converts to a
-    list of floats.
-    '''
-    nums = re.findall('[\d\.]+', dictstring)
-    nums = [float(num) for num in nums]
-    return nums
-
-def pull_features_from_memory_game(game):
-
-    def rect_locations(game):
-        rawrects = game['MemoryGameRecordTargetRects']
-        for rect in rawrects:
-
-        return centers, radii
-
-
-    def memorydist(ts, rects):
-        '''
-        ts is a single touch sample from one memory game.
-        '''
-        hitloc = ts['MemoryGameTouchSampleLocation']
-        hitloc = dictstring_to_nums(hitloc) # hitloc = [x, y]
-        trueloc =
-        return memdist
-
-#    def mean_dist_corrects(game):
-    touchsamples = game['MemoryGameRecordTouchSamples']
-    for ts in touchsamples:
-        if ts['MemoryGameTouchSampleIsCorrect'] == True:
-            dist_from_center = memorydist(ts)
-
-
-        pass
-        return meandistcorrects, touchsamples
-
-
-    # outputs:
-    memory_features = {}
-    memory_features['score'] = game['MemoryGameRecordGameScore']
-    memory_features['meandistcorrects'] = mean_dist_corrects(game)
-    pass
-    return memory_features
-
-
-def combine_memory_games_per_record(memory_features):
-    pass
-
-
-    return memory_features_combined
-
-
-# represent the memory squares graphically:
-rects = game['MemoryGameRecordTargetRects']
-rects_as_nums = []
-for rect in rects:
-    r = re.findall('\d+', rect)
-    r = [float(num) for num in r]
-    rects_as_nums.append(r)
-rects = rects_as_nums
-
-
-
 #    cd /Users/matto/Dropbox/Insight/sage/
 
 
-# convert_squares_to_patch
-rect = rects[0]
-fig1 = plt.figure()
-ax1 = fig1.add_subplot(111, aspect='equal')
-ax1.add_patch(patches.Rectangle((rect[0], rect[1]),   # (x,y)
-        rect[2],          # width
-        rect[3],          # height
-    )
-)
-
-
-
-
-
-points = [[2, 1], [8, 1], [8, 4]]
-polygon = plt.Polygon(points)
-points = [[2, 4], [2, 8], [4, 6], [6, 8]]
-line = plt.Polygon(points, closed=None, fill=None, edgecolor='r')
-
-
-
-filePaths[df.ix[0, 'deviceMotion_walking_outbound.json.items’)]
-filePaths[df.ix[0, 'deviceMotion_walking_outbound.json.items’)]
-
-
-
-
-
-
-
-# visualize columns:
-memory.hist()
-
-# look at one entry:
-memory[memory.recordId == '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33']['game_numGames'] # picks numGames column for this recordId row
-
-
-
-filePaths = load_memory_game_results()
-
-
-
-
-
-
+#filePaths[df.ix[0, 'deviceMotion_walking_outbound.json.items’)]
+#filePaths[df.ix[0, 'deviceMotion_walking_outbound.json.items’)]
+#
+## visualize columns:
+#memory.hist()
+#
+## look at one entry:
+#memory[memory.recordId == '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33']['game_numGames'] # picks numGames column for this recordId row
+#
+#filePaths = load_memory_game_results()
 
 # look at the records from one game:
 # s = df['MemoryGameResults.json.MemoryGameGameRecords']
-
-
+#
 # first task: split into parkinsons' and non-parkinsons'...
-
-
-
-
-
-
 
 
 #if __name__ == "__main__":
