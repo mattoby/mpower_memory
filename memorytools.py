@@ -152,6 +152,8 @@ def dictstring_to_nums(dictstring):
 
 
 def pull_features_from_memory_game(game):
+    print game
+
     '''
     Main function to pull features out of memory game records.
     '''
@@ -200,8 +202,11 @@ def pull_features_from_memory_game(game):
         memdists = []
         for ts in touchsamples:
             memdists.append(memorydist(ts, rectlocations))
+
+        print 'memdists = %s' % memdists
+
         firstdist = memdists[0]
-        meandist = np.mean(memdists[1:]) # does this make sense?
+        meandist = np.mean(memdists) # does this make sense?
 
         return firstdist, meandist, memdists
 
@@ -244,13 +249,44 @@ def pull_features_from_memory_game(game):
     latency, meanDt, touchDtimes = memorytimes(touchsamples)
     # find successes:
     successful, successes = memorysuccesses(touchsamples)
-    assert successes[-2] == True, 'the second to last success is not true, it should always be!'
+    # split dists into success & non-success categories:
+#    print 'firstdist=%s' % firstdist
+#    print 'meandist=%s' % meandist
+#    print 'memdists=%s' % memdists
+#    print 'latency=%s' % latency
+#    print 'meanDt=%s' % meanDt
+#    print 'touchDtimes=%s' % touchDtimes
+#    print 'successes=%s' % successes
+#    print 'successful=%s' % successful
+
+
+
+
+#    if len(successes) > 1:
+#        print successes
+#        print game
+
+#        assert successes[-2] == True, 'the second to last success is not true, it should always be!' # this assert is wrong.
+
     # game board size (larger = harder! analyze separately!):
     gamesize = game['MemoryGameRecordGameSize']
     # game score:
     gamescore = game['MemoryGameRecordGameScore']
 
+    print 'gamesize=%s' % gamesize
+
+    # group dists into success & non-success categories:
+    successdists = [memdists[i] for i in range(len(memdists)) if successes[i]]
+    unsuccessdists = [memdists[i] for i in range(len(memdists)) if successes[i]==False]
+
     # pack outputs:
+
+    # distances, etc. in uncondensed form (1 ind per touch sample)
+    memory_features_uncondensed = {}
+    memory_features_uncondensed['memdists'] =memdists
+    memory_features_uncondensed['successes'] = successes
+    memory_features_uncondensed['memdists_successful'] = successdists
+    memory_features_uncondensed['memdists_unsuccessful'] = unsuccessdists
 
     # distances, times, etc. condensed into single stats per game
     memory_features = {}
@@ -261,11 +297,12 @@ def pull_features_from_memory_game(game):
     memory_features['successful'] = successful
     memory_features['gamesize'] = gamesize
     memory_features['gamescore'] = gamescore
+    memory_features['meansuccessfuldist'] = np.mean(successdists)
+    memory_features['meanunsuccessfuldist'] = np.mean(unsuccessdists)
+    memory_features['numsuccesses'] =  np.sum(np.array(successes))
+    memory_features['numunsuccesses'] =  np.sum(~np.array(successes))
 
-    # distances, etc. in uncondensed form (1 ind per touch sample)
-    memory_features_uncondensed = {}
-    memory_features_uncondensed['memdists'] =memdists
-    memory_features_uncondensed['successes'] = successes
+    print memory_features
 
     return memory_features#, memory_features_uncondensed
 
@@ -277,9 +314,11 @@ def extract_games_from_memory_record(filePaths, data, memrecordId):
     '''
     recordtoget = data[data['recordId']==memrecordId]
 #    record_Id = data.game_records_txt[0]
-#    game_record = mt.load_memory_results_json(filePaths, record_Id)
-    record_Id = recordtoget.game_records_txt[0]
-    games_from_record = mt.load_memory_results_json(filePaths, record_Id)
+#    game_record = load_memory_results_json(filePaths, record_Id)
+    print recordtoget.game_records_txt
+    record_Id = recordtoget.game_records_txt.values[0]
+    print record_Id
+    games_from_record = load_memory_results_json(filePaths, record_Id)
     return games_from_record
 
 
@@ -321,7 +360,7 @@ def average_features_from_memory_games(games):
 
     all_memory_features = {}
     for game in games:
-        memory_features = mt.pull_features_from_memory_game(game)
+        memory_features = pull_features_from_memory_game(game)
         for feature in memory_features:
 #            print feature
             if all_memory_features.has_key(feature):
@@ -331,7 +370,7 @@ def average_features_from_memory_games(games):
 
     avg_memory_features = {}
     for feature in all_memory_features:
-        avg_memory_features[feature] = mean(all_memory_features[feature])
+        avg_memory_features[feature] = np.mean(all_memory_features[feature])
 
     return avg_memory_features # , all_memory_features
 
@@ -344,6 +383,7 @@ def form_features_from_memory_record(filePaths, data, memrecordId):
     '''
         # pull out games:
     games = extract_games_from_memory_record(filePaths, data, memrecordId)
+    games = filter_out_broken_games(games)
     games_by_sizes = group_games_by_sizes(games)
 
         # split them up by game sizes:
@@ -356,6 +396,23 @@ def form_features_from_memory_record(filePaths, data, memrecordId):
 #            else
 #                memory_features_by_sizes[gamesize] = []
     return avg_features_by_sizes
+
+def filter_out_broken_games(games):
+    '''
+    remove games that are in some way messed up (eg., no touch records)
+    '''
+    # Tag games as broken:
+    brokengametag = [False]*len(games)
+    for n, game in enumerate(games):
+        # no touch samples:
+        if len(game['MemoryGameRecordTouchSamples']) == 0:
+            brokengametag[n] = True
+        # other criteria:?
+
+    # remove broken ones:
+    games = [games[i] for i in range(len(games)) if brokengametag[i]==False]
+
+    return games
 
 
 ###############

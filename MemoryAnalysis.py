@@ -14,7 +14,8 @@ import memorytools as mt
 # from pandas import DataFrame, Series
 # if running in ipython... (so i can see plots)
 %pylab
-%load_ext autoreload # for reloading modules
+# for reloading modules:
+%load_ext autoreload
 # %autoreload 2 # this will reload all modules
 
 # initialize environment:
@@ -30,21 +31,22 @@ data = mt.filter_data_for_popular_phones(data)
 
 # load a single game record (for now..)
 
-memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
+#record = data[data['recordId']==memrecordId]
 
-
+#def create_feature_columns_from_memory_game
 for memrecordId in data['recordId']:
-    avg_features_by_sizes = form_features_from_memory_record(filePaths, data, memrecordId)
+    print memrecordId
+    avg_features_by_sizes = mt.form_features_from_memory_record(filePaths, data, memrecordId)
 
 
 
 
 
-#!# FINISH!
 
+# problem: 0d313fd2-d798-4d09-8c21-b632c5ef454b'
 
 # get just one game to play with:
-game = games_from_record[0]
+# game = games_from_record[0]
 
 
 
