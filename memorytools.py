@@ -544,17 +544,41 @@ def convert_features_to_numbers(features_df):
     return df
 
 
+def split_off_label_variable(features_df, labelcol):
+    '''
+    Split a column off of the features_df dataframe, and convert it to be used as the label array in sklearn
+    Check similarity to move_col_to_end_of_df (should be combined)
+    '''
+
+    y_col = features_df[labelcol]
+    features_df = features_df.drop(labelcol, axis=1)
+
+    return features_df, y_col
+
+def convert_features_df_to_X_and_y_for_machinelearning(features_df, labelcol):
+    # split off the label variable:
+    features_df, y_col = split_off_label_variable(features_df, labelcol)
+    # split into the X and y vectors:
+    X = features_df.iloc[:,:].values
+    y = y_col.values
+    X_names = features_df.columns.values
+    y_name = y_col.name
+    # # old way: X, y = features_df.iloc[:,:-1].values, features_df.iloc[:, -1]
+    return X, y, X_names, y_name
 
 
+#############################
+## Miscellaneous functions ##
+#############################
 
-
-
-
-
-
-
-
-
+def move_col_to_end_of_df(df, colname):
+    '''
+    moves column colname to be the last column of dataframe df
+    '''
+    col = df[colname]
+    df = df.drop(colname, axis=1)
+    df[colname] = col
+    return df
 
 
 
@@ -591,6 +615,9 @@ def convert_features_to_numbers(features_df):
 #line = plt.Polygon(points, closed=None, fill=None, edgecolor='r')
 
 
+# convert nas to large negative #:
+#naval = -999999
+#data.fillna(value=naval)
 
 
 

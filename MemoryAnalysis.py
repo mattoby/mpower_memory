@@ -58,26 +58,41 @@ import numpy as np
 from sklearn.utils.validation import check_consistent_length, _num_samples
 import sklearn.preprocessing
 
-##################### Preprocess:
+##################### Preprocess data for machine learning:
 # define features:
 features_df = data[["game_score","age","game_numFails", "phoneInfo",
     "education", "gender", "phoneUsage", "smartphone", "hasParkinsons"]]
 features_df = mt.convert_features_to_numbers(features_df)
+features_df = mt.move_col_to_end_of_df(features_df, 'hasParkinsons')
 
-#for column in names_of_columns_to_transform:
-#    features_df = transform_feature( features_df, column )
-#    features_df = hot_encoder( features_df, column)
-#print( features_df.head() )
+# do more processing here, in case of features with lots of nas
 
-# put parkinsons column at end:
-y_df = features_df['hasParkinsons']
-features_df = features_df.drop('hasParkinsons', axis=1)
-features_df['hasParkinsons'] = y_df
+# drop na rows:
+features_df = features_df.dropna()
 
-# convert nas to large negative #:
-#naval = -999999
-#data.fillna(value=naval)
-#features_df = features_df.dropna()
+# convert to matrices for machine learning:
+labelcol = 'hasParkinsons'
+X, y, X_names, y_name = mt.convert_features_df_to_X_and_y_for_machinelearning(features_df, labelcol)
+
+##################### Perform machine learning:
+
+# do cross validation manually:
+from sklearn.cross_validation import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -91,12 +106,7 @@ features_df['hasParkinsons'] = y_df
 #    'maritalStatus_5', 'maritalStatus_6']
 #features_df = features_df.drop(suspicious_features, axis=1)
 
-# split into the X and y vectors:
-X, y = features_df.iloc[:,:-1].values, features_df.iloc[:, -1]
-X_names = features_df.columns.values[:-1]
 
-print features_df.columns
-print X_names
 
 #y = features_df['hasParkinsons'].astype('int').tolist()
 #features_df = features_df.drop('hasParkinsons',1)
