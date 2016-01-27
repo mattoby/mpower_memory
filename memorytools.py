@@ -369,9 +369,16 @@ def average_features_from_memory_games(games):
             else:
                 all_memory_features[feature] = [memory_features[feature]]
 
+    print 'all memory features: %s' % all_memory_features
     avg_memory_features = {}
     for feature in all_memory_features:
-        avg_memory_features[feature] = np.mean(all_memory_features[feature])
+        # pull out the values for that feature:
+        vals = np.array(all_memory_features[feature])
+        # remove nan values:
+        vals = vals[~np.isnan(vals)]
+        # average non-nan values:
+        avg_memory_features[feature] = np.mean(vals)
+#        avg_memory_features[feature] = np.mean(all_memory_features[feature])
 
     return avg_memory_features # , all_memory_features
 

@@ -30,7 +30,9 @@ mt.loadSynapseRecordsFromScratch = False
 syn, memory, memorysyn, filePaths, demographics, demosyn, data = mt.create_memory_environment(synuser, synpass)
 data = mt.filter_data_for_popular_phones(data)
 # pull out features from games:
-data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=True, toSave=False, outFileName='memory_data_with_features.p')
+fromFile = False
+toSave = True
+data = mt.add_memory_game_features_to_data(filePaths, data, fromFile = fromFile, toSave=toSave, outFileName='memory_data_with_features.p')
 #data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=False, toSave=False, outFileName='memory_data_with_features.p')
 
 
