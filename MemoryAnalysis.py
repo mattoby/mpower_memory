@@ -57,11 +57,17 @@ import sklearn.ensemble
 import numpy as np
 from sklearn.utils.validation import check_consistent_length, _num_samples
 import sklearn.preprocessing
+from sklearn.cross_validation import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 
 ##################### Preprocess data for machine learning:
 # define features:
+#features_df = data[["game_score","age","game_numFails", "phoneInfo",
+#    "education", "gender", "phoneUsage", "smartphone", "hasParkinsons"]]
 features_df = data[["game_score","age","game_numFails", "phoneInfo",
     "education", "gender", "phoneUsage", "smartphone", "hasParkinsons"]]
+
 features_df = mt.convert_features_to_numbers(features_df)
 features_df = mt.move_col_to_end_of_df(features_df, 'hasParkinsons')
 
@@ -77,14 +83,85 @@ X, y, X_names, y_name = mt.convert_features_df_to_X_and_y_for_machinelearning(fe
 ##################### Perform machine learning:
 
 # do cross validation manually:
-from sklearn.cross_validation import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 0)
 
+# scale features:
+stdsc = StandardScaler()
+stdsc.fit(X_train)
+X_train_std = stdsc.fit_transform(X_train)
+X_test_std = stdsc.transform(X_test)
+X_combined_std = np.vstack((X_train_std, X_test_std))
+y_combined = np.hstack((y_train, y_test))
+
+# create logistic regression model:
+lr = LogisticRegression(C=1000.0, random_state=0)##
+#lr = linear_model.LogisticRegression(penalty='l1', C=0.1) # with regularization
+lr.fit(X_train_std, y_train)
+
+# assess regression performance:
+lr.coef_
+lr.intercept_ # this is the 0 coeff?
+lr.fit(X_train_std, y_train)
+print 'training accuracy:', lr.score(X_train_std, y_train)
+print 'test accuracy:', lr.score(X_test_std, y_test) # suspiciously high..
+lr.intercept_
+lr.coef_ # only using 4 features.. which ones?
+# mt.plot_decision_regions(X_combined_std, y_combined_std, classifier=lr, test_idx=range(len(X_train_std),len(X_combined_std)+1))
+X_names_heavy = X_names[np.where(np.abs(lr.coef_) > 0.1)[1]]
+Scoef = convert_regression_coefs_to_pdSeries(lr.coef_, X_names)
+print Scoef.sort_values
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+##############
+## old/junk ##
+##############
+
+
+
+
+sortinds = lr.coef_.argsort()
+df = pd.DataFrame(lr.coef_.reshape(8, -1))
+coef = lr.coef_.reshape(8, -1)
+outdf = pd.Series([lr.coef_)
+
+
+
+outdf = pd.DataFrame(data={'coef':[lr.coef_]}, index=X_names)
+outdf = pd.Series([lr.coef_], index=X_names)
+
+print [lr.coef_[sortinds], lr.X_names[sortinds]]
+
+sorted_arr1 = arr1[arr1inds[::-1]]
+sorted_arr2 = arr2[arr1inds[::-1]]
+
+lrcoefinds = lr.coef_.argsort()
+X_names[lrcoefinds[::-1]]
+lr.coef_.T[lrcoefinds[::-1]]
+subplot
+figure()
+
+plot(data['age'],data['hasParkinsons'])
+d1 = [data['age'],data['hasParkinsons']]
+boxplot(d1)
+
+
+
+#X_train_norm = mms.fit_transform(X_train)
+#X_test_norm = mms.transform(X_test)
+
+# fit StandardScaler only once on the training data, then use those params to transform the test set or any new datapoint
 
 
 
@@ -141,8 +218,7 @@ X_test_std = stdsc.transform(X_test)
 lr = linear_model.LogisticRegression(penalty='l1', C=0.1)
 lr.fit(X_train_std, y_train)
 print 'training accuracy:', lr.score(X_train_std, y_train)
-lr.score(X_test_std, y_test) # is this right? affected by some of the vars?
-# look at the coefficients.
+print 'test accuracy:', lr.score(X_test_std, y_test) # suspiciously high..
 lr.intercept_
 lr.coef_ # only using 4 features.. which ones?
 
