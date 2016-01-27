@@ -58,35 +58,21 @@ import numpy as np
 from sklearn.utils.validation import check_consistent_length, _num_samples
 import sklearn.preprocessing
 
-
-# For scikit-learn part:
-
-
-
-
 ##################### Preprocess:
-# features_df.isnull().sum() # looks at the nulls in each col
-#education - 8 nans
-#employment - 19 nans
-#gender - 5 nans
-#lastSmoked - >5000 nans
-#maritalStatus - 18 nans
-#phoneUsage - 6 nans
-#smartphone - 5 nans
-# age - 15 nans
-
-#"brainStim",
-# Last 'feature' is output variable, to be chopped into y
-# Continuous features are listed first
-# marital status, "maritalStatus",
+# define features:
 features_df = data[["game_score","age","game_numFails",
     "phoneInfo","education", "gender", "phoneUsage",
     "smartphone", "hasParkinsons"]]
 
-#"brainStim", "education", 'employment'
-#columns_to_transform = ["phoneInfo", "gender","maritalStatus", "phoneUsage", "smartphone"] # fix so that parkinson's column is treated correctly!!!!
-# diagYear... onsetYear
+# 7854
+# convert na's to -999999
 
+# convert nas to large negative #:
+#naval = -999999
+#data.fillna(value=naval)
+#features_df = features_df.dropna()
+
+# fix so that parkinson's column is treated correctly!!!!
 features_df = mt.manually_prep_features(features_df)
 
 #for column in names_of_columns_to_transform:
@@ -99,9 +85,7 @@ y_df = features_df['hasParkinsons']
 features_df = features_df.drop('hasParkinsons', axis=1)
 features_df['hasParkinsons'] = y_df
 
-# drop nas:
-# notnanrows = np.where(features_df['age'].notnull())[0]
-features_df = features_df.dropna()
+
 
 ## chop features that are weighted too highly...
 # from unchopped, weighted features are: array([u'smartphone', 'employment_2', 'maritalStatus_1', 'smartphone_3'], dtype=object)

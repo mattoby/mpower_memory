@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 import os
+from numpy import nan
 
 ###############################
 ## Pulling data from synapse ##
@@ -488,6 +489,7 @@ def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedga
 def manually_prep_features(features_df):
     '''
     Manual prep step of features for import to machine learning model
+    Should be fixed to deal better with nans.
     '''
     df = pd.DataFrame.copy(features_df)
 
@@ -495,27 +497,38 @@ def manually_prep_features(features_df):
         '''
         convert a categorical (but ordered) column to #'s, based on a manually determined conversion code.
         '''
-        assert set(code.keys()) == set(df[column]), 'Need to make new code maps - it doesn''t match the codes from the data'
+        def assign_code(code, colval):
+#            print 'COLVAL IS!!!!!!!!! %s' % colval
+            if pd.isnull(colval):
+                return nan
+            else:
+                return code[colval]
+
+#        assert set(df[column].unique())==set(education_code.keys()), 'Need to make new code maps - it doesn''t match the codes from the data'
+        # this assert should be done!!! problem with nans!
+
         # reset smartphone values to difficulty for user:
-        df[column] = [code[df[column][i]] for i in df.index]
+#        df[column] = [code[df[column][i]] for i in df.index]
+        df[column] = [assign_code(code, df[column][i]) for i in df.index]
+
         return df
 
     ### Define maps of categories to ordinal values:
 
     ### Education by # years post-middleschool:
-    education_code = {nan:nan, 'Some high school':2,
+    education_code = {'Some high school':2,
     'High School Diploma/GED':4, '2-year college degree':6,
     'Some college':6, '4-year college degree':8,
     'Some graduate school':10, "Master's Degree":10,
     'Doctoral Degree':13}
     ### Smartphone by difficulty description:
-    smartphone_code = {nan:nan,'Very easy':1, 'Easy':2,
+    smartphone_code = {'Very easy':1, 'Easy':2,
     'Neither easy nor difficult':3, 'Difficult':4,
     'Very Difficult':5}
     ### Gender (binary ordinates):
-    gender_code = {nan:nan, 'Male':1, 'Female':0}
+    gender_code = {'Male':1, 'Female':0}
     ### Phone Usage (what does this mean?):
-    phoneUsage_code = {nan:nan, 'false':0, 'Not sure':1, 'true':2}
+    phoneUsage_code = {'false':0, 'Not sure':1, 'true':2}
     ### Phone Info (the phone used) (encoded as screen size):
     phoneInfo_code = {'iPhone 5s (GSM)':4.0, 'iPhone 6':4.7,
     'iPhone 6 Plus':5.5}
