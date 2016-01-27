@@ -61,58 +61,6 @@ import sklearn.preprocessing
 
 # For scikit-learn part:
 
-# transform categorical features
-
-def transform_feature(df, column_name ):
-    '''
-    Transforms categorical features from dataframe df & column_name into numbers
-    From https://civisanalytics.com/blog/data-science/2015/12/17/workflows-in-python-getting-data-ready-to-build-models/
-    '''
-    unique_values = set( df[column_name].tolist() )
-    transformer_dict = {}
-    for ii, value in enumerate(unique_values):
-        transformer_dict[value] = ii
-
-    def label_map(y):
-        return transformer_dict[y]
-    df[column_name] = df[column_name].apply( label_map )
-    return df
-
-
-def hot_encoder(df, column_name):
-    '''
-    Hot encodes categorical feature (that is already converted to #'s by transform_feature) into multiple binary columns
-
-    From: https://civisanalytics.com/blog/data-science/2015/12/23/workflows-in-python-curating-features-and-thinking-scientifically-about-algorithms/
-
-    Look at instead: pd.get_dummies(df[['col1','col2','col3']]) # will do the encoding instead..
-    '''
-    column = df[column_name].tolist()
-    column = np.reshape( column, (len(column), 1) )  ### needs to be an N x 1 numpy array
-    enc = sklearn.preprocessing.OneHotEncoder()
-    enc.fit( column )
-    new_column = enc.transform( column ).toarray()
-    column_titles = []
-    ### making titles for the new columns, and appending them to dataframe
-    for ii in range( len(new_column[0]) ):
-        this_column_name = column_name+"_"+str(ii)
-        df[this_column_name] = new_column[:,ii]
-    return df
-
-
-def hot_encode_categorical_features(features_df, columns_to_transform):
-    '''
-    Transforms and hot-encodes categorical feature into multiple binary columns
-    Columns_to_transform is a list of column names. e.g., :
-    ["phoneInfo", "smartphone"]
-    '''
-
-    for column in columns_to_transform:
-        features_df = transform_feature( features_df, column )
-        features_df = hot_encoder( features_df, column)
-#        features_df = pd.get_dummies
-    print( features_df.head() )
-    return features_df
 
 
 
@@ -141,24 +89,6 @@ features_df = data[["game_score","age","game_numFails",
 
 features_df = mt.manually_prep_features(features_df)
 
-
-
-
-
-
-    # try encoding phone info as phone screen size??
-
-    for record in features_df['education']:
-
-    newrecord =
-
-
-features_df = encode_categorical_features(features_df, columns_to_encode)
-features_df = encode_binary_features(features_df, columns_to_encode)
-
-
-
-features_df = hot_encode_categorical_features(features_df, columns_to_transform)
 #for column in names_of_columns_to_transform:
 #    features_df = transform_feature( features_df, column )
 #    features_df = hot_encoder( features_df, column)
@@ -364,29 +294,62 @@ Z = logreg.predict(np.c_[xx.ravel(), yy.ravel()])
 
 
 
-#    cd /Users/matto/Dropbox/Insight/sage/
 
 
-#filePaths[df.ix[0, 'deviceMotion_walking_outbound.json.items’)]
-#filePaths[df.ix[0, 'deviceMotion_walking_outbound.json.items’)]
-#
-## visualize columns:
-#memory.hist()
-#
-## look at one entry:
-#memory[memory.recordId == '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33']['game_numGames'] # picks numGames column for this recordId row
-#
-#filePaths = load_memory_game_results()
-
-# look at the records from one game:
-# s = df['MemoryGameResults.json.MemoryGameGameRecords']
-#
-# first task: split into parkinsons' and non-parkinsons'...
 
 
-#if __name__ == "__main__":
-#    main()
 
-    ####### float(tsloc.split(',')[0][1:])
+
+# transform categorical features
+def transform_feature(df, column_name ):
+    '''
+    Transforms categorical features from dataframe df & column_name into numbers
+    From https://civisanalytics.com/blog/data-science/2015/12/17/workflows-in-python-getting-data-ready-to-build-models/
+    '''
+    unique_values = set( df[column_name].tolist() )
+    transformer_dict = {}
+    for ii, value in enumerate(unique_values):
+        transformer_dict[value] = ii
+
+    def label_map(y):
+        return transformer_dict[y]
+    df[column_name] = df[column_name].apply( label_map )
+    return df
+
+
+def hot_encoder(df, column_name):
+    '''
+    Hot encodes categorical feature (that is already converted to #'s by transform_feature) into multiple binary columns
+
+    From: https://civisanalytics.com/blog/data-science/2015/12/23/workflows-in-python-curating-features-and-thinking-scientifically-about-algorithms/
+
+    Look at instead: pd.get_dummies(df[['col1','col2','col3']]) # will do the encoding instead..
+    '''
+    column = df[column_name].tolist()
+    column = np.reshape( column, (len(column), 1) )  ### needs to be an N x 1 numpy array
+    enc = sklearn.preprocessing.OneHotEncoder()
+    enc.fit( column )
+    new_column = enc.transform( column ).toarray()
+    column_titles = []
+    ### making titles for the new columns, and appending them to dataframe
+    for ii in range( len(new_column[0]) ):
+        this_column_name = column_name+"_"+str(ii)
+        df[this_column_name] = new_column[:,ii]
+    return df
+
+
+def hot_encode_categorical_features(features_df, columns_to_transform):
+    '''
+    Transforms and hot-encodes categorical feature into multiple binary columns
+    Columns_to_transform is a list of column names. e.g., :
+    ["phoneInfo", "smartphone"]
+    '''
+
+    for column in columns_to_transform:
+        features_df = transform_feature( features_df, column )
+        features_df = hot_encoder( features_df, column)
+#        features_df = pd.get_dummies
+    print( features_df.head() )
+    return features_df
 
 
