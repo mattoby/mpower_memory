@@ -32,11 +32,21 @@ data = mt.filter_data_for_popular_phones(data)
 # pull out features from games:
 data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=True, toSave=False, outFileName='memory_data_with_features.p')
 
+
+##############
+############## exploration:
+##############
+
+data['games'] = data['gender']
+
+data.set_value(rowidx, colname, featureval)
+
+
+
+
 ####################
 ## model building ##
 ####################
-
-
 
 
 # get just one game to play with:
