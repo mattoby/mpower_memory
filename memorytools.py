@@ -481,6 +481,72 @@ def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedga
     return data
 
 
+#################################
+## Machine Learning, data prep ##
+#################################
+
+def manually_prep_features(features_df):
+    '''
+    Manual prep step of features for import to machine learning model
+    '''
+    df = pd.DataFrame.copy(features_df)
+
+    def ordinate_categorical_col(df, column, code):
+        '''
+        convert a categorical (but ordered) column to #'s, based on a manually determined conversion code.
+        '''
+        assert set(code.keys()) == set(df[column]), 'Need to make new code maps - it doesn''t match the codes from the data'
+        # reset smartphone values to difficulty for user:
+        df[column] = [code[df[column][i]] for i in df.index]
+        return df
+
+    ### Define maps of categories to ordinal values:
+
+    ### Education by # years post-middleschool:
+    education_code = {nan:nan, 'Some high school':2,
+    'High School Diploma/GED':4, '2-year college degree':6,
+    'Some college':6, '4-year college degree':8,
+    'Some graduate school':10, "Master's Degree":10,
+    'Doctoral Degree':13}
+    ### Smartphone by difficulty description:
+    smartphone_code = {nan:nan,'Very easy':1, 'Easy':2,
+    'Neither easy nor difficult':3, 'Difficult':4,
+    'Very Difficult':5}
+    ### Gender (binary ordinates):
+    gender_code = {nan:nan, 'Male':1, 'Female':0}
+    ### Phone Usage (what does this mean?):
+    phoneUsage_code = {nan:nan, 'false':0, 'Not sure':1, 'true':2}
+    ### Phone Info (the phone used) (encoded as screen size):
+    phoneInfo_code = {'iPhone 5s (GSM)':4.0, 'iPhone 6':4.7,
+    'iPhone 6 Plus':5.5}
+
+    ### do feature ordinations:
+    df = ordinate_categorical_col(df, 'smartphone', smartphone_code)
+    df = ordinate_categorical_col(df, 'education', education_code)
+    df = ordinate_categorical_col(df, 'gender', gender_code)
+    df = ordinate_categorical_col(df, 'phoneUsage', phoneUsage_code)
+    df = ordinate_categorical_col(df, 'phoneInfo', phoneInfo_code)
+
+    return df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ###############
 ## Old/other ##

@@ -47,49 +47,27 @@ data = mt.add_memory_game_features_to_data(filePaths, data, fromFile = fromFile,
 ####################
 ## model building ##
 ####################
-
-
-# get just one game to play with:
-# game = games_from_record[0]
-
-
-
-
-
-
-## split games into size bins:
-#def extract_games_sizes(games):
-#    for game in games:
-#        gamesize
-## split to the different game sizes:
-#games[1]['MemoryGameRecordGameSize']
-
-
-
-
-
-
-
-
-
-
-
-
-
 # sklearn:
 from sklearn import linear_model
+import sklearn
 import sklearn.linear_model
 import sklearn.cross_validation
 import sklearn.tree
 import sklearn.ensemble
 import numpy as np
 from sklearn.utils.validation import check_consistent_length, _num_samples
+import sklearn.preprocessing
+
 
 # For scikit-learn part:
 
 # transform categorical features
-# from https://civisanalytics.com/blog/data-science/2015/12/17/workflows-in-python-getting-data-ready-to-build-models/
-def transform_feature( df, column_name ):
+
+def transform_feature(df, column_name ):
+    '''
+    Transforms categorical features from dataframe df & column_name into numbers
+    From https://civisanalytics.com/blog/data-science/2015/12/17/workflows-in-python-getting-data-ready-to-build-models/
+    '''
     unique_values = set( df[column_name].tolist() )
     transformer_dict = {}
     for ii, value in enumerate(unique_values):
@@ -100,11 +78,15 @@ def transform_feature( df, column_name ):
     df[column_name] = df[column_name].apply( label_map )
     return df
 
-# from: https://civisanalytics.com/blog/data-science/2015/12/23/workflows-in-python-curating-features-and-thinking-scientifically-about-algorithms/
-import sklearn.preprocessing
-# sklearn.preprocessing.LabelEncoder # look into instead?.. # no
-# pd.get_dummies(df[['col1','col2','col3']]) # will do the encoding instead..
+
 def hot_encoder(df, column_name):
+    '''
+    Hot encodes categorical feature (that is already converted to #'s by transform_feature) into multiple binary columns
+
+    From: https://civisanalytics.com/blog/data-science/2015/12/23/workflows-in-python-curating-features-and-thinking-scientifically-about-algorithms/
+
+    Look at instead: pd.get_dummies(df[['col1','col2','col3']]) # will do the encoding instead..
+    '''
     column = df[column_name].tolist()
     column = np.reshape( column, (len(column), 1) )  ### needs to be an N x 1 numpy array
     enc = sklearn.preprocessing.OneHotEncoder()
@@ -116,6 +98,23 @@ def hot_encoder(df, column_name):
         this_column_name = column_name+"_"+str(ii)
         df[this_column_name] = new_column[:,ii]
     return df
+
+
+def hot_encode_categorical_features(features_df, columns_to_transform):
+    '''
+    Transforms and hot-encodes categorical feature into multiple binary columns
+    Columns_to_transform is a list of column names. e.g., :
+    ["phoneInfo", "smartphone"]
+    '''
+
+    for column in columns_to_transform:
+        features_df = transform_feature( features_df, column )
+        features_df = hot_encoder( features_df, column)
+#        features_df = pd.get_dummies
+    print( features_df.head() )
+    return features_df
+
+
 
 ##################### Preprocess:
 # features_df.isnull().sum() # looks at the nulls in each col
@@ -131,22 +130,39 @@ def hot_encoder(df, column_name):
 #"brainStim",
 # Last 'feature' is output variable, to be chopped into y
 # Continuous features are listed first
+# marital status, "maritalStatus",
 features_df = data[["game_score","age","game_numFails",
-    "phoneInfo","education",
-    "employment","gender","maritalStatus",
-    "phoneUsage", "smartphone", "hasParkinsons"]]
+    "phoneInfo","education", "gender", "phoneUsage",
+    "smartphone", "hasParkinsons"]]
 
-#"brainStim", "education"
-names_of_columns_to_transform = ["phoneInfo",
-    "education","employment",
-    "gender","maritalStatus",
-    "phoneUsage", "smartphone"] # fix so that parkinson's column is treated correctly!!!!
+#"brainStim", "education", 'employment'
+#columns_to_transform = ["phoneInfo", "gender","maritalStatus", "phoneUsage", "smartphone"] # fix so that parkinson's column is treated correctly!!!!
 # diagYear... onsetYear
 
-for column in names_of_columns_to_transform:
-    features_df = transform_feature( features_df, column )
-    features_df = hot_encoder( features_df, column)
-print( features_df.head() )
+features_df = mt.manually_prep_features(features_df)
+
+
+
+
+
+
+    # try encoding phone info as phone screen size??
+
+    for record in features_df['education']:
+
+    newrecord =
+
+
+features_df = encode_categorical_features(features_df, columns_to_encode)
+features_df = encode_binary_features(features_df, columns_to_encode)
+
+
+
+features_df = hot_encode_categorical_features(features_df, columns_to_transform)
+#for column in names_of_columns_to_transform:
+#    features_df = transform_feature( features_df, column )
+#    features_df = hot_encoder( features_df, column)
+#print( features_df.head() )
 
 # put parkinsons column at end:
 y_df = features_df['hasParkinsons']
