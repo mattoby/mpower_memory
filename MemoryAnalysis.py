@@ -31,7 +31,12 @@ syn, memory, memorysyn, filePaths, demographics, demosyn, data = mt.create_memor
 data = mt.filter_data_for_popular_phones(data)
 # pull out features from games:
 data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=True, toSave=False, outFileName='memory_data_with_features.p')
+#data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=False, toSave=False, outFileName='memory_data_with_features.p')
 
+
+# look at individual game results:
+#memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
+#avg_features_by_sizes, games, games_by_sizes = mt.form_features_from_memory_record(filePaths, data, memrecordId)
 
 ##############
 ############## exploration:
@@ -40,6 +45,8 @@ data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=True, toSav
 data['games'] = data['gender']
 
 data.set_value(rowidx, colname, featureval)
+
+
 
 
 

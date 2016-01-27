@@ -376,27 +376,32 @@ def average_features_from_memory_games(games):
     return avg_memory_features # , all_memory_features
 
 
-def form_features_from_memory_record(filePaths, data, memrecordId, allowedgamesizes):
+def form_features_from_memory_record(filePaths, data, memrecordId, allowedgamesizes=allowedgamesizes):
     '''
     This does the full pipeline for a single memory table record:
     splits them into game size groups, & determines averaged
     features for each group
     '''
-        # pull out games:
+    # pull out games:
     games = extract_games_from_memory_record(filePaths, data, memrecordId)
     games = filter_out_broken_games(games)
     games_by_sizes = group_games_by_sizes(games, allowedgamesizes)
 
-        # split them up by game sizes:
+    # split them up by game sizes:
     avg_features_by_sizes = {}
     for gamesize in games_by_sizes:
-        games = games_by_sizes[gamesize]
-        if len(games) > 0:
-            avg_memory_features = average_features_from_memory_games(games)
+        currgames = games_by_sizes[gamesize]
+        if len(currgames) > 0:
+            avg_memory_features = average_features_from_memory_games(currgames)
             avg_features_by_sizes[gamesize] = avg_memory_features
 #            else
 #                memory_features_by_sizes[gamesize] = []
-    return avg_features_by_sizes
+
+
+    return avg_features_by_sizes, games, games_by_sizes
+
+
+
 
 def filter_out_broken_games(games):
     '''
@@ -423,10 +428,30 @@ def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedga
 
     '''
     if not(fromFile):
+        data['gamesdata'] = 0
+#        print '\n\n\n\n'
+#        print data['gamesdata']
+#        print '\n\n\n\n'
+
         for memrecordId in data['recordId']:
             rowidx = data[data['recordId']==memrecordId].index.tolist()
-            print 'Adding features to row: %s' % rowidx[0]
-            avg_features_by_sizes = form_features_from_memory_record(filePaths, data, memrecordId, allowedgamesizes)
+#            rowidx = rowidx[0]
+            print 'Adding features to row: %s' % rowidx#[0]
+
+            avg_features_by_sizes, games, games_by_sizes = form_features_from_memory_record(filePaths, data, memrecordId, allowedgamesizes)
+
+            # add games & games_by_sizes to data as new column:
+#            print '\n\ngames = %s\n\n\n\n\n' % games
+#            print '\n\nrowidx = %s\n\n\n\n\n' % rowidx
+#            print '\n\ngames_by_sizes = %s\n\n\n\n\n' % games_by_sizes
+            #gamesdata = {'games':games, 'games_by_sizes':games_by_sizes}
+
+            gamesdata = {'a':games_by_sizes}
+
+#            data.set_value(rowidx, 'gamesdata', gamesdata)
+            data.set_value(rowidx, 'gamesdata', {'games_by_sizes':games_by_sizes})
+#            data.set_value(rowidx, 'games_by_sizes', games_by_sizes)
+
             # put features into data structure:
             for gamesize in avg_features_by_sizes:
 #                print 'avg_features_by_sizes = %s' % avg_features_by_sizes
