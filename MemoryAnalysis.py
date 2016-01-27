@@ -60,20 +60,9 @@ import sklearn.preprocessing
 
 ##################### Preprocess:
 # define features:
-features_df = data[["game_score","age","game_numFails",
-    "phoneInfo","education", "gender", "phoneUsage",
-    "smartphone", "hasParkinsons"]]
-
-# 7854
-# convert na's to -999999
-
-# convert nas to large negative #:
-#naval = -999999
-#data.fillna(value=naval)
-#features_df = features_df.dropna()
-
-# fix so that parkinson's column is treated correctly!!!!
-features_df = mt.manually_prep_features(features_df)
+features_df = data[["game_score","age","game_numFails", "phoneInfo",
+    "education", "gender", "phoneUsage", "smartphone", "hasParkinsons"]]
+features_df = mt.convert_features_to_numbers(features_df)
 
 #for column in names_of_columns_to_transform:
 #    features_df = transform_feature( features_df, column )
@@ -84,6 +73,11 @@ features_df = mt.manually_prep_features(features_df)
 y_df = features_df['hasParkinsons']
 features_df = features_df.drop('hasParkinsons', axis=1)
 features_df['hasParkinsons'] = y_df
+
+# convert nas to large negative #:
+#naval = -999999
+#data.fillna(value=naval)
+#features_df = features_df.dropna()
 
 
 

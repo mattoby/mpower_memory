@@ -486,9 +486,9 @@ def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedga
 ## Machine Learning, data prep ##
 #################################
 
-def manually_prep_features(features_df):
+def convert_features_to_numbers(features_df):
     '''
-    Manual prep step of features for import to machine learning model
+    Prep step of particular features, which are categorical (but ordered) and should be converted to ordinal or cardinal #'s - this converts them to numbers for import to machine learning model.
     Should be fixed to deal better with nans.
     '''
     df = pd.DataFrame.copy(features_df)
@@ -539,6 +539,7 @@ def manually_prep_features(features_df):
     df = ordinate_categorical_col(df, 'gender', gender_code)
     df = ordinate_categorical_col(df, 'phoneUsage', phoneUsage_code)
     df = ordinate_categorical_col(df, 'phoneInfo', phoneInfo_code)
+    print 'Features converted to numbers: smartphone, education, gender, phoneUsage, phoneInfo'
 
     return df
 
