@@ -536,12 +536,26 @@ def convert_features_to_numbers(features_df):
     'iPhone 6 Plus':5.5}
 
     ### do feature ordinations:
-    df = ordinate_categorical_col(df, 'smartphone', smartphone_code)
-    df = ordinate_categorical_col(df, 'education', education_code)
-    df = ordinate_categorical_col(df, 'gender', gender_code)
-    df = ordinate_categorical_col(df, 'phoneUsage', phoneUsage_code)
-    df = ordinate_categorical_col(df, 'phoneInfo', phoneInfo_code)
-    print 'Features converted to numbers: smartphone, education, gender, phoneUsage, phoneInfo'
+    fcodes = {'smartphone':smartphone_code,
+    'education':education_code,
+    'gender':gender_code,
+    'phoneUsage':phoneUsage_code,
+    'phoneInfo':phoneInfo_code}
+
+    featureschanged = []
+    for feature in fcodes:
+        if feature in df:
+            df = ordinate_categorical_col(df, feature, fcodes[feature])
+            featureschanged.append(feature)
+
+#    df = ordinate_categorical_col(df, 'smartphone', smartphone_code)
+
+#    df = ordinate_categorical_col(df, 'education', education_code)
+#    df = ordinate_categorical_col(df, 'gender', gender_code)
+#    df = ordinate_categorical_col(df, 'phoneUsage', phoneUsage_code)
+#    df = ordinate_categorical_col(df, 'phoneInfo', phoneInfo_code)
+    print 'Features converted to numbers:\n'
+    print featureschanged #smartphone, education, gender, phoneUsage, phoneInfo'
 
     return df
 
