@@ -30,27 +30,18 @@ mt.loadSynapseRecordsFromScratch = False
 syn, memory, memorysyn, filePaths, demographics, demosyn, data = mt.create_memory_environment(synuser, synpass)
 data = mt.filter_data_for_popular_phones(data)
 # pull out features from games:
-fromFile = False
-toSave = True
+fromFile = True#False
+toSave = False#True
 data = mt.add_memory_game_features_to_data(filePaths, data, fromFile = fromFile, toSave=toSave, outFileName='memory_data_with_features.p')
-#data = mt.add_memory_game_features_to_data(filePaths, data, fromFile=False, toSave=False, outFileName='memory_data_with_features.p')
-
 
 # look at individual game results:
 #memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
 #avg_features_by_sizes, games, games_by_sizes = mt.form_features_from_memory_record(filePaths, data, memrecordId)
 
+
 ##############
 ############## exploration:
 ##############
-
-data['games'] = data['gender']
-
-data.set_value(rowidx, colname, featureval)
-
-
-
-
 
 
 ####################

@@ -477,6 +477,7 @@ def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedga
         pickle.dump( data, open( outFileName, "wb" ) )
         print 'memory features saved to file: %s' % outFileName
 
+    print 'Warning: need to deal with case where meansuccessfuldist > meanunsuccessfuldist, e.g., with record 7944 (1st 16-box game)'
     return data
 
 
