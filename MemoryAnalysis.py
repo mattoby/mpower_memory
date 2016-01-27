@@ -61,6 +61,9 @@ from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 
+
+### run_entire_logistic_regression(data, features) # build this
+
 ##################### Preprocess data for machine learning:
 # define features:
 #features_df = data[["game_score","age","game_numFails", "phoneInfo",
@@ -112,6 +115,12 @@ Scoef = convert_regression_coefs_to_pdSeries(lr.coef_, X_names)
 print Scoef.sort_values
 
 
+## second round:
+
+
+
+
+
 
 
 
@@ -127,7 +136,9 @@ print Scoef.sort_values
 ##############
 ## old/junk ##
 ##############
-
+for col in data.columns:
+    if col in features:
+        print col
 
 
 
