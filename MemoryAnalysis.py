@@ -72,6 +72,8 @@ from sklearn.linear_model import LogisticRegression
 features_df = data[["game_score","age","game_numFails", "phoneInfo",
     "education", "gender", "phoneUsage", "smartphone", "hasParkinsons"]]
 
+features_df = data[['game_score', 'hasParkinsons']]
+
 features_df = mt.convert_features_to_numbers(features_df)
 features_df = mt.move_col_to_end_of_df(features_df, 'hasParkinsons')
 
