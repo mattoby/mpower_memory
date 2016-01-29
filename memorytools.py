@@ -16,6 +16,21 @@ from numpy import nan
 
 from matplotlib.colors import ListedColormap
 
+# sklearn imports:
+from sklearn import linear_model
+import sklearn
+import sklearn.linear_model
+import sklearn.cross_validation
+import sklearn.tree
+import sklearn.ensemble
+import numpy as np
+from sklearn.utils.validation import check_consistent_length, _num_samples
+import sklearn.preprocessing
+from sklearn.cross_validation import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+
 ###############################
 ## Pulling data from synapse ##
 ###############################
@@ -583,6 +598,47 @@ def convert_features_df_to_X_and_y_for_machinelearning(features_df, labelcol):
     return X, y, X_names, y_name
 
 
+def prep_memory_features_for_machine_learning(data, features, labelcol):
+    '''
+        Uses other ML prep functions to get memory features in and ready for machine learning.
+        This takes in the memory data dataframe, the features of interest, and which feature should be the label column (i.e., what's being predicted), and formats all of this correctly for inputting into sklearn.
+    '''
+
+    ##################### Preprocess data for machine learning:
+    # define features (include the label feature here:
+#    features = ['game_score', 'age', 'hasParkinsons']
+    features_df = data[features]
+    features_df = convert_features_to_numbers(features_df)
+    features_df = move_col_to_end_of_df(features_df, 'hasParkinsons')
+
+    # do more processing here, in case of features with lots of nas?
+
+    # drop na rows:
+    features_df = features_df.dropna()
+
+    # convert to matrices for machine learning:
+    #labelcol = 'hasParkinsons'
+    X, y, X_names, y_name = convert_features_df_to_X_and_y_for_machinelearning(features_df, labelcol)
+
+    ##################### Set features up for machine learning:
+
+    # split for cross validation:
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 0)
+
+    # scale features:
+    stdsc = StandardScaler()
+    stdsc.fit(X_train)
+    X_train_std = stdsc.fit_transform(X_train)
+    X_test_std = stdsc.transform(X_test)
+    X_combined_std = np.vstack((X_train_std, X_test_std))
+    y_combined = np.hstack((y_train, y_test))
+
+    return features_df, X, y, X_names, y_name, stdsc, X_train_std, X_test_std, X_combined_std, y_combined
+
+
+
+
+
 #############################
 ## Miscellaneous functions ##
 #############################
@@ -602,6 +658,12 @@ def convert_regression_coefs_to_pdSeries(coef_, X_names):
     S = pd.Series(inlist, index=index)
     return S
 
+def display_num_nulls_per_column(df):
+    numnulls = df.isnull().sum()
+    pd.set_option('display.max_rows', len(numnulls))
+    numnulls.sort_values(inplace=True, ascending=True)
+    print 'Number of nulls per column:\n'
+    print numnulls
 
 
 
