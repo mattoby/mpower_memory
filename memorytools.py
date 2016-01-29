@@ -48,7 +48,7 @@ def login_synapse(username, password):
     :returns: the syn structure logged in as user
     '''
     syn = synapseclient.Synapse()
-    syn.login(username, password) # need to change this, security.
+    syn.login(username, password, rememberMe=True)
     return syn
 
 
@@ -633,7 +633,32 @@ def prep_memory_features_for_machine_learning(data, features, labelcol):
     X_combined_std = np.vstack((X_train_std, X_test_std))
     y_combined = np.hstack((y_train, y_test))
 
-    return features_df, X, y, X_names, y_name, stdsc, X_train_std, X_test_std, X_combined_std, y_combined
+    return features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined
+
+
+
+
+
+#############################
+## Visualization functions ##
+#############################
+
+
+def display_num_nulls_per_column(df):
+    numnulls = df.isnull().sum()
+    pd.set_option('display.max_rows', len(numnulls))
+    numnulls.sort_values(inplace=True, ascending=True)
+    print 'Number of nulls per column:\n'
+    print numnulls
+
+
+
+
+
+
+
+
+
 
 
 
@@ -657,14 +682,6 @@ def convert_regression_coefs_to_pdSeries(coef_, X_names):
     index = X_names.tolist()
     S = pd.Series(inlist, index=index)
     return S
-
-def display_num_nulls_per_column(df):
-    numnulls = df.isnull().sum()
-    pd.set_option('display.max_rows', len(numnulls))
-    numnulls.sort_values(inplace=True, ascending=True)
-    print 'Number of nulls per column:\n'
-    print numnulls
-
 
 
 
