@@ -33,6 +33,7 @@ data = mt.filter_data_for_popular_phones(data)
 fromFile = True#False
 toSave = False#True
 data = mt.add_memory_game_features_to_data(filePaths, data, fromFile = fromFile, toSave=toSave, outFileName='memory_data_with_features.p')
+data = mt.add_composite_features_to_data(data)
 
 # look at individual game results:
 #memrecordId = '5a0b4204-8a6c-430f-be93-c5aa2d6c9e33'
@@ -430,5 +431,20 @@ def hot_encode_categorical_features(features_df, columns_to_transform):
 #        features_df = pd.get_dummies
     print( features_df.head() )
     return features_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

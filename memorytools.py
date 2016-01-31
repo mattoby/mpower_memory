@@ -13,6 +13,8 @@ import matplotlib.patches as patches
 import numpy as np
 import os
 from numpy import nan
+import seaborn as sns
+import datetime
 
 from matplotlib.colors import ListedColormap
 
@@ -30,6 +32,14 @@ from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+
+
+#####################################
+## fixed variables for memorytools ##
+#####################################
+
+
+
 
 ###############################
 ## Pulling data from synapse ##
@@ -95,6 +105,7 @@ def load_demographics_table_from_synapse(syn):
     # finish:
     return demographics, demosyn
 
+
 loadSynapseRecordsFromScratch = False
 # get the json files (slow, only load from scratch once):
 def load_memory_game_results_from_synapse(syn, memorysyn, fromScratch = loadSynapseRecordsFromScratch):
@@ -114,23 +125,27 @@ def load_memory_results_json(filePaths, game_record_txt):
     return game_record
 
 
+def join_memory_and_demographics_dfs(memory, demographics):
+    '''
+    Join the memory and demographics dataframes into new dataframe,
+    'data'
+    '''
+    data = pd.merge(left=memory, right=demographics, how='inner', left_on='healthCode', right_on='healthCode')
+    return data
+
+
 # create the whole environment for the memory data:
 # (this is the last setup function, which folds in the others)
 def create_memory_environment(synapse_user, synapse_pass):
 
+    ## start everything up:
     syn = login_synapse(synapse_user, synapse_pass)
     memory, memorysyn = load_memory_table_from_synapse(syn)
     filePaths = load_memory_game_results_from_synapse(syn, memorysyn)
     demographics, demosyn = load_demographics_table_from_synapse(syn)
 
     ## join dataframes:
-    def has_parkinsons(data):
-        hasdiagyear = ~np.isnan(data.diagYear)
-        hasprofessionalDiagnosis = data.professionalDiagnosis == True
-        hasParkinsons = hasdiagyear | hasprofessionalDiagnosis
-        return hasParkinsons
-    data = pd.merge(left=memory, right=demographics, how='inner', left_on='healthCode', right_on='healthCode')
-    data['hasParkinsons'] = has_parkinsons(data)
+    data = join_memory_and_demographics_dfs(memory, demographics)
 
     ## check dataset:
     assert len(data['recordId']) == len(data), 'Memory test record Ids should be unique, but they aren''t -- check the data structure.'
@@ -157,6 +172,43 @@ def filter_data_for_popular_phones(data):
 #######################################
 ## Get features from the memory game ##
 #######################################
+
+def add_composite_features_to_data(data):
+    '''
+    Define special composite columns in the data, which are calculated from other raw columns.
+    '''
+    def has_parkinsons(data):
+        hasdiagyear = ~np.isnan(data.diagYear)
+        hasprofessionalDiagnosis = data.professionalDiagnosis == True
+        hasParkinsons = hasdiagyear | hasprofessionalDiagnosis
+        return hasParkinsons
+
+    def played_game4(data):
+        '''
+        Did they play the 2x2 game in that session?
+        '''
+        playedgame4 = data['4_gamesize'].notnull()
+        return playedgame4
+
+    def parkinsons_time(data, OutlierCutoff = 50):
+        '''
+        Number of years that somebody has had parkinsons
+        Outliers (default = those above 50 years) are lowered to the next highest val (they are assumed to be incorrectly entered in the app)
+        '''
+        curryear = datetime.datetime.now().year
+        nyears = np.array([curryear - y for y in data['onsetYear']])
+        # fix outliers:
+        newmax = nyears[nyears < OutlierCutoff].max()
+        nyears[nyears > OutlierCutoff] = newmax
+        return nyears
+
+    ## add extra features:
+    data['hasParkinsons'] = has_parkinsons(data)
+    data['played_game4'] = played_game4(data)
+    data['nyearsParkinsons'] = parkinsons_time(data)
+
+    return data
+
 
 def dictstring_to_nums(dictstring):
     '''
@@ -387,7 +439,7 @@ def average_features_from_memory_games(games):
             else:
                 all_memory_features[feature] = [memory_features[feature]]
 
-    print 'all memory features: %s' % all_memory_features
+#    print 'all memory features: %s' % all_memory_features
     avg_memory_features = {}
     for feature in all_memory_features:
         # pull out the values for that feature:
@@ -497,6 +549,15 @@ def add_memory_game_features_to_data(filePaths, data, allowedgamesizes=allowedga
 
     print 'Warning: need to deal with case where meansuccessfuldist > meanunsuccessfuldist, e.g., with record 7944 (1st 16-box game)'
     return data
+
+
+def extract_health_history_words(data):
+    '''
+    Extract all words from the healthHistory field (in case useful)
+    Might be useful... text analysis...
+    '''
+
+
 
 
 #################################
@@ -635,7 +696,9 @@ def prep_memory_features_for_machine_learning(data, features, labelcol):
 
     return features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined
 
-
+def resample_feature1_to_match_feature2dist():
+    ####
+    pass
 
 
 
@@ -651,6 +714,15 @@ def display_num_nulls_per_column(df):
     print 'Number of nulls per column:\n'
     print numnulls
 
+def squaregridhistplot(features_df):
+    '''
+    Plots a grid of plots, each row & col corresponding to a column in the dataframe, with contour maps for each pair & hists on the diagonal
+    From: http://stanford.edu/~mwaskom/software/seaborn-dev/tutorial/distributions.html
+    '''
+    g = sns.PairGrid(features_df)
+    g.map_diag(sns.kdeplot)
+    g.map_offdiag(sns.kdeplot, cmap="Blues_d", n_levels=6)
+    return g
 
 
 
@@ -682,6 +754,7 @@ def convert_regression_coefs_to_pdSeries(coef_, X_names):
     index = X_names.tolist()
     S = pd.Series(inlist, index=index)
     return S
+
 
 
 
