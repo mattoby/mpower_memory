@@ -15,6 +15,7 @@ import os
 from numpy import nan
 import seaborn as sns
 import datetime
+from scipy.stats import ttest_ind
 
 from matplotlib.colors import ListedColormap
 
@@ -190,22 +191,40 @@ def add_composite_features_to_data(data):
         playedgame4 = data['4_gamesize'].notnull()
         return playedgame4
 
-    def parkinsons_time(data, OutlierCutoff = 50):
+    curryear = datetime.datetime.now().year
+    def nyears_parkinsons(data, OutlierCutoff = 50, curryear=curryear):
         '''
         Number of years that somebody has had parkinsons
         Outliers (default = those above 50 years) are lowered to the next highest val (they are assumed to be incorrectly entered in the app)
         '''
-        curryear = datetime.datetime.now().year
         nyears = np.array([curryear - y for y in data['onsetYear']])
         # fix outliers:
         newmax = nyears[nyears < OutlierCutoff].max()
         nyears[nyears > OutlierCutoff] = newmax
         return nyears
 
+    def nyears_on_meds(data, OutlierCutoff = 50, curryear=curryear):
+        '''
+        Number of years that a patient has been on parkinsons meds
+        (assumes that the patients have been taking meds continuously since they started)
+        Note: some of the patients put in the year '0' or '15' for when they started. these are converted to nulls (they should be years AD). The outlier cutoff is 50 years (i.e., 50 years back from today's date, which would be, e.g., 1966, rather than the year 0, e.g.)
+        '''
+        nyears = np.array([curryear - y for y in data['medicationStartYear']])
+        # fix outliers, by making them nan:
+        nyears[nyears > OutlierCutoff] = nan
+        return nyears
+
+
     ## add extra features:
     data['hasParkinsons'] = has_parkinsons(data)
     data['played_game4'] = played_game4(data)
-    data['nyearsParkinsons'] = parkinsons_time(data)
+    data['nyearsParkinsons'] = nyears_parkinsons(data)
+    data['nyearsOnMeds'] = nyears_on_meds(data)
+    data['nyearsOffMeds'] = data['nyearsParkinsons'] - data['nyearsOnMeds']
+    print 'Note that nyearsOffMeds = nyearsParkinsons - nyearsOnMeds'
+
+    ## idiot check outputs:
+    assert sum(data['nyearsParkinsons']<data['nyearsOnMeds']) == 0, 'Some of the nyearsOnMeds records are higher than the nyearsParkinsons records - there is a problem here'
 
     return data
 
@@ -558,6 +577,60 @@ def extract_health_history_words(data):
     '''
 
 
+def define_feature_categories():
+    fcats = {}
+
+    fcats['demographic'] = \
+        ['age',
+        'gender',
+        'education']
+
+    fcats['game'] = \
+        ['game_numFails',
+        'game_score',
+        'game_numGames',
+        '9_numsuccesses',
+        '9_numunsuccesses',
+        '9_meandist',
+        '9_successful',
+        '9_gamescore',
+        '9_latency',
+        '9_firstdist',
+        '9_meanDt',
+        '9_meansuccessfuldist',
+        '16_firstdist',
+        '16_meandist',
+        '16_numsuccesses',
+        '16_gamescore',
+        '16_latency',
+        '16_numunsuccesses',
+        '16_successful',
+        '16_meanDt',
+        '16_meansuccessfuldist',
+        'played_game4']
+
+    fcats['phone'] = \
+        ['phoneInfo',
+        'smartphone']
+
+    fcats['output'] = \
+        ['hasParkinsons',
+        'medTimepoint',
+        'brainStim',
+        'surgery',
+        'nyearsOnMeds',
+        'nyearsOffMeds',
+        'nyearsParkinsons']
+    print 'Note that nyearsOffMeds = nyearsParkinsons - nyearsOnMeds'
+
+    fcats['time'] = \
+        ['game_endDate'
+        'createdOn'
+        'game_startDate']
+
+    fcats['person'] = ['healthCode']
+    return fcats
+
 
 
 #################################
@@ -577,9 +650,11 @@ def convert_features_to_numbers(features_df):
         '''
         def assign_code(code, colval):
 #            print 'COLVAL IS!!!!!!!!! %s' % colval
+#            print 'code is!!!! %s' % code
             if pd.isnull(colval):
                 return nan
             else:
+
                 return code[colval]
 
 #        assert set(df[column].unique())==set(education_code.keys()), 'Need to make new code maps - it doesn''t match the codes from the data'
@@ -625,7 +700,6 @@ def convert_features_to_numbers(features_df):
             featureschanged.append(feature)
 
 #    df = ordinate_categorical_col(df, 'smartphone', smartphone_code)
-
 #    df = ordinate_categorical_col(df, 'education', education_code)
 #    df = ordinate_categorical_col(df, 'gender', gender_code)
 #    df = ordinate_categorical_col(df, 'phoneUsage', phoneUsage_code)
@@ -659,7 +733,7 @@ def convert_features_df_to_X_and_y_for_machinelearning(features_df, labelcol):
     return X, y, X_names, y_name
 
 
-def prep_memory_features_for_machine_learning(data, features, labelcol):
+def prep_memory_features_for_machine_learning(data, features, labelcol, convert_features_to_nums=True):
     '''
         Uses other ML prep functions to get memory features in and ready for machine learning.
         This takes in the memory data dataframe, the features of interest, and which feature should be the label column (i.e., what's being predicted), and formats all of this correctly for inputting into sklearn.
@@ -669,7 +743,8 @@ def prep_memory_features_for_machine_learning(data, features, labelcol):
     # define features (include the label feature here:
 #    features = ['game_score', 'age', 'hasParkinsons']
     features_df = data[features]
-    features_df = convert_features_to_numbers(features_df)
+    if convert_features_to_nums:
+        features_df = convert_features_to_numbers(features_df)
     features_df = move_col_to_end_of_df(features_df, 'hasParkinsons')
 
     # do more processing here, in case of features with lots of nas?
@@ -727,15 +802,6 @@ def squaregridhistplot(features_df):
 
 
 
-
-
-
-
-
-
-
-
-
 #############################
 ## Miscellaneous functions ##
 #############################
@@ -749,11 +815,124 @@ def move_col_to_end_of_df(df, colname):
     df[colname] = col
     return df
 
+
 def convert_regression_coefs_to_pdSeries(coef_, X_names):
     inlist = coef_.tolist()[0]
     index = X_names.tolist()
     S = pd.Series(inlist, index=index)
     return S
+
+
+def test():
+    return 1
+
+def column_ttests(df, ttestcol, ttestcolCutoff=0.5):
+    '''
+    Performs ttest of all columns in df (except for ttestcol), against
+    values of ttesetcol, where the values are split into positive and
+    negative classes based on ttestcol being above or below
+    ttestcolCutoff value.
+    e.g., ttestcol = 'hasParkinsons',
+    df = features_df
+    NOTE: will throw an error if any of the columns are not numerical.
+    '''
+
+    # split data into low & high categories based on ttestcol vals:
+    catlow = df[df[ttestcol] < ttestcolCutoff]
+    cathigh = df[df[ttestcol] >= ttestcolCutoff]
+
+    # create list of columns, not including the ttestcol:
+    testcols = df.columns.tolist()
+    testcols.pop(testcols.index(ttestcol))
+
+    tstats = []
+    pvals = []
+    for feature in testcols:
+#        print 'feature ======= %s' % feature
+        t, p = ttest_ind(catlow[feature].dropna(), cathigh[feature].dropna())
+        tstats.append(t)
+        pvals.append(p)
+        #scipy.stats.ranksums()[source]
+
+    ttestresults = pd.DataFrame({'pvals':pvals,'tstats':tstats},index=testcols)
+    ttestresults = ttestresults.sort_values('pvals')
+    return ttestresults # testcols, pvals, tstats
+
+
+def resample_to_match_distribution(df, distcol, splitcol, splitVal_resample, splitVal_guide, nbins, nResamples):
+    '''
+    This will take a dataframe, split it into two parts based on values
+    in splitcol (which must only have 2 values in it), and will then
+    resample rows from the resulting df_resample dataframe. The resampling
+    will be done such that the distribution in column distcol matches
+    the distribution of values in distcol in the df_guide dataframe.
+    This is intended to help deconfound variables: e.g., if age is a
+    confound for hasParkinsons, run it like this:
+
+    df = features_df
+    distcol = 'age'
+    splitcol = 'hasParkinsons'
+    splitVal_resample = False
+    splitVal_guide = True
+    nbins = 10
+    nResamples = 100
+
+    df = the dataframe to work on
+    distcol = the column in df that should have matching distributions
+    splitcol = the column in df that will be split into resample and guide
+    splitVal_resample = value in splitcol defining the df to be resampled
+    splitVal_guide = value in splitcol for df whose dist should be matched
+    nResamples = # of rows from the resample df to be output
+
+    resamples done without replacement. nans are not included in distribution.
+
+    outputs:
+    df_resampled = the resampled version of df_resample
+    df_guide = the df with splitVal_guide vals in splitcol
+    df_resample = the df to resample
+    '''
+
+    ### split dataframe into df_resample and df_guide:
+    df_resample = df[df[splitcol] == splitVal_resample]
+    df_guide = df[df[splitcol] == splitVal_guide]
+
+    ### take a histogram of df_guide, to get density distribution:
+    guidevals = df_guide[distcol].values
+    guidevals = guidevals[~np.isnan(guidevals)]
+    hist, binedges = np.histogram(guidevals, bins=nbins)
+
+    ### create weights vector:
+
+    # (1-row per row in df_resample, with a weight on that row
+    # determined by the density distribution of df_guide)
+    resamplevals = df_resample[distcol].values
+    wts = np.zeros(resamplevals.shape)
+
+    # find the vals within each histogram bin:
+    for n, histval in enumerate(hist):
+        leftedge = binedges[n]
+        rightedge = binedges[n+1]
+        goodinds = np.where((resamplevals > leftedge) & \
+                               (resamplevals <= rightedge))
+        wts[goodinds] = histval
+
+    ### normalize weights:
+    wts = wts/sum(wts)
+
+    ### sample the indices of resamplevals with the given weights:
+    #samples = np.array(['a','b','c','d'])
+    allinds = np.arange(len(resamplevals))
+    indsamples = np.random.choice(allinds, size=nResamples, replace=False, p=wts)
+
+    ### output df_resample with only the sampled rows:
+    # (this makes the index point to allinds, so they must be identical!)
+
+    #df_resample = df_resample.reindex(allinds)
+    #assert (numpy.array_equal(df_resample.index.values, allinds)), 'there is a problem with\the indices. sampling won''t come out right.'
+
+    df_resampled = df_resample.iloc[indsamples,:]
+
+    return df_resampled, df_guide, df_resample
 
 
 
