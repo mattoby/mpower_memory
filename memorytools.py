@@ -624,8 +624,8 @@ def define_feature_categories():
     print 'Note that nyearsOffMeds = nyearsParkinsons - nyearsOnMeds'
 
     fcats['time'] = \
-        ['game_endDate'
-        'createdOn'
+        ['game_endDate',
+        'createdOn',
         'game_startDate']
 
     fcats['person'] = ['healthCode']
