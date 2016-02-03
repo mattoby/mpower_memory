@@ -16,6 +16,8 @@ from numpy import nan
 import seaborn as sns
 import datetime
 from scipy.stats import ttest_ind
+from scipy.stats import ranksums
+
 
 from matplotlib.colors import ListedColormap
 
@@ -33,7 +35,7 @@ from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-
+from sklearn.metrics import confusion_matrix
 
 #####################################
 ## fixed variables for memorytools ##
@@ -685,17 +687,22 @@ def convert_features_to_numbers(features_df):
     ### Phone Info (the phone used) (encoded as screen size):
     phoneInfo_code = {'iPhone 5s (GSM)':4.0, 'iPhone 6':4.7,
     'iPhone 6 Plus':5.5}
+    ### medTimepoint (note, this output is only of whether they are on meds)
+    medTimepoint_code = {"I don't take Parkinson medications":nan, "Immediately before Parkinson medication":0.0, "Another time":nan, "Just after Parkinson medication (at your best)":1.0 }
 
     ### do feature ordinations:
     fcodes = {'smartphone':smartphone_code,
     'education':education_code,
     'gender':gender_code,
     'phoneUsage':phoneUsage_code,
-    'phoneInfo':phoneInfo_code}
+    'phoneInfo':phoneInfo_code,
+    'medTimepoint':medTimepoint_code}
 
     featureschanged = []
     for feature in fcodes:
+#        print 'feature = %s' % feature
         if feature in df:
+#            print 'featuretochange = %s' % feature
             df = ordinate_categorical_col(df, feature, fcodes[feature])
             featureschanged.append(feature)
 
@@ -774,6 +781,126 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
 def resample_feature1_to_match_feature2dist():
     ####
     pass
+
+
+
+######################
+## Machine learning ##
+######################
+
+
+def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=False):
+    '''
+    Does age correction & sample balancing, then runs ML
+
+    This function is ugly, needs to be cleaned up & generalized
+    features must include the labelcol
+
+    '''
+
+    # define the columns to sample balance & resample on:
+    distcol = 'age'
+    splitcol = 'hasParkinsons'
+    nbins = 10
+    nResamples = 600
+
+    # build features dataframe:
+    fdf = data[features]
+    fdf = convert_features_to_numbers(fdf)
+
+    # resample non-Park to same age distribution as Parkinsons:
+    splitVal_resample = False
+    splitVal_guide = True
+
+    df_resampled, df_guide, df_resample = resample_to_match_distribution(fdf, distcol, splitcol, splitVal_resample, splitVal_guide, nbins, nResamples)
+    df_resampled_np = df_resampled
+    df_Parkinsons = df_guide
+    df_np = df_resample
+
+    # resample Park to the resampled non-Park for sample balancing:
+    # resample non-Park to same age distribution as Parkinsons:
+    df = df_resampled_np.append(df_Parkinsons)
+
+    splitVal_resample = True
+    splitVal_guide = False
+    df_resampled, df_guide, df_resample = resample_to_match_distribution(df, distcol, splitcol, splitVal_resample, splitVal_guide, nbins, nResamples)
+    df_resampled_Park = df_resampled
+
+
+    if toPlot == True:
+        # plot first set:
+        plt.figure()
+        sns.distplot(df_guide[distcol].dropna(), label='hasParkinsons')
+        sns.distplot(df_resample[distcol].dropna(), label='no Parkinsons')
+        sns.distplot(df_resampled[distcol].dropna(), label='no Parkinsons, resampled')
+        plt.legend(loc=2)
+
+        # test pval first set:
+        x = df_resampled[distcol].dropna().values
+        y = df_guide[distcol].dropna().values
+        p2 = ranksums(x, y)
+        print p2
+#        print 'ranksum pval for age corrected = %s' % p2
+
+        # plot second set:
+        plt.figure()
+        sns.distplot(df_Parkinsons[distcol].dropna(), label='hasParkinsons')
+        sns.distplot(df_np[distcol].dropna(), label='no Parkinsons')
+        sns.distplot(df_resampled_np[distcol].dropna(), label='no Parkinsons, resampled')
+        sns.distplot(df_resampled_Park[distcol].dropna(), label='Parkinsons, resampled')
+        plt.legend(loc=2)
+
+        # test pval 2nd set:
+        x = df_resampled_np[distcol].dropna().values
+        y = df_resampled_Park[distcol].dropna().values
+        p2 = ranksums(x, y)
+        print p2
+#        print 'ranksum pval for sample balanced = %s' % p2
+
+
+    ### Redo machine learning with these sets:
+    df = df_resampled_np.append(df_resampled_Park)
+    # features = fcats['game'] + ['hasParkinsons']# + fcats['demographic'] + fcats['output']
+
+    #labelcol = 'hasParkinsons'
+    #mt.display_num_nulls_per_column(df[features])
+
+    # labelcol goes in here, and is what is learned with the model:
+    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined = prep_memory_features_for_machine_learning(df, features, labelcol, convert_features_to_nums=False)
+
+    # create model:
+    mod = RandomForestClassifier(n_estimators=100)
+    #lr = linear_model.LogisticRegression(penalty='l1', C=0.1) # with regularization
+    mod.fit(X_train, y_train)
+
+    if toPlot == True:
+        ###### assess performance:
+        mod.fit(X_train, y_train)
+        print 'training accuracy:', mod.score(X_train, y_train)
+        print 'test accuracy:', mod.score(X_test, y_test)
+        print 'num actual positives = %s' % sum(y)
+        print 'num actual negatives = %s' % (len(y) - sum(y))
+        print 'random accuracy would be %s' % (float(sum(y))/len(y))
+        print '\n'
+
+    # which features matter?
+    mat = mod.predict_proba(X_test)
+
+    # feature importances:
+    if toPlot == True:
+        print 'feature importances:'
+        S = pd.Series(mod.feature_importances_, index=X_names, name="feature importances")
+        print S.sort_values()
+
+    #  Confusion matrix:
+    y_pred = mod.predict(X_test)
+    sklearn.metrics.roc_auc_score(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+
+    return mod, features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined
+
+
+
 
 
 
