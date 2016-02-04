@@ -677,8 +677,8 @@ def feature_names(features):
         'nyearsParkinsons':     '# years of Parkinson''s',
         'game_endDate':         'game date'
         }
-    feature_names = [fnames[f] for f in features]
-    return feature_names
+    fnames_out = np.array([fnames[f] for f in features])
+    return fnames_out
 
 
 #################################
@@ -843,7 +843,7 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
 
 
 
-def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=False, toPrint=False, MLexcludecols=[]):
+def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=[1,1,1,1], toPrint=False, MLexcludecols=[]):
     '''
     Does age correction & sample balancing, then runs random forest ML
 
@@ -941,8 +941,16 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
     ######### Plotting & outputs #########
 
+    if toPlot[0] == 1:
 
-    if toPlot == True:
+        # plot zeroth set:
+        plt.figure()
+        sns.distplot(df_Parkinsons[distcol].dropna(), label='Parkinsons')
+        sns.distplot(df_np[distcol].dropna(), label='non Parkinsons')
+        plt.legend(loc=2)
+        plt.show()
+
+    if toPlot[1] == 1:
         # plot first set:
         plt.figure()
         sns.distplot(df_Parkinsons[distcol].dropna(), label='Parkinsons')
@@ -951,9 +959,8 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
         plt.legend(loc=2)
         plt.show()
 
-#        print 'ranksum pval for age corrected = %s' % p2
-
-        # plot second set:
+    if toPlot[2] == 1:
+    # plot second set:
         plt.figure()
         sns.distplot(df_Parkinsons[distcol].dropna(), label='Parkinsons')
         sns.distplot(df_np[distcol].dropna(), label='non Parkinsons')
@@ -962,8 +969,10 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
         plt.legend(loc=2)
         plt.show()
 
+    if toPlot[3] == 1:
         # plot feature importances:
         plot_feature_importances_randforest(mod, X_names)
+
 
 
     if toPrint == True:
@@ -999,20 +1008,26 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
 
 
-def plot_feature_importances_randforest(model, X_names):
+def plot_feature_importances_randforest(model, X_names, useFeatureNames=True):
     '''
     Builds barplot of feature importances for random forest.
     model should be a randomForest model, already trained.
     X_names are the names of the features (np array)
     '''
 
+    # get nice feature names for plot:
+    if useFeatureNames:
+        fnames = feature_names(X_names)
+    else:
+        fnames = X_names
+
     importances = model.feature_importances_
     indices = np.argsort(importances)#[::-1]
     plt.figure(figsize=(3, 7))
     plt.title('Feature importances')
-    plt.barh(range(len(X_names)), importances[indices], align='center', )
-    plt.ylim([-1, len(X_names)])
-    plt.yticks(range(len(X_names)), X_names[indices])
+    plt.barh(range(len(fnames)), importances[indices], align='center', )
+    plt.ylim([-1, len(fnames)])
+    plt.yticks(range(len(fnames)), fnames[indices])
     plt.xticks(rotation=90)
 #    for f in range(features):
 #        print ("%2d) %-*s %f" % (f+1, 30, features[f], importances[indices[f]]))
