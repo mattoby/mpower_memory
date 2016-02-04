@@ -12,11 +12,13 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 import os
+import sys
 from numpy import nan
 import seaborn as sns
 import datetime
 from scipy.stats import ttest_ind
 from scipy.stats import ranksums
+from contextlib import contextmanager
 
 
 from matplotlib.colors import ListedColormap
@@ -578,6 +580,11 @@ def extract_health_history_words(data):
     Might be useful... text analysis...
     '''
 
+def define_feature_nicenames():
+    pass
+#    return fnicenames
+
+
 
 def define_feature_categories():
     fcats = {}
@@ -797,7 +804,7 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
 
 
 
-def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=False):
+def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=False, toPrint=False, MLexcludecols=[]):
     '''
     Does age correction & sample balancing, then runs random forest ML
 
@@ -805,6 +812,9 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
     features must include the labelcol
 
     Might need to build an option later that does not drop nas on all columns.. for now it does.
+
+    MLexcludecols lists columns that should not go into the ML
+    For example, if the labelcol should be
     '''
 
     # define the columns to sample balance & resample on:
@@ -860,6 +870,16 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
     # labelcol goes in here, and is what is learned with the model:
     #    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined = prep_memory_features_for_machine_learning(df, features, labelcol, convert_features_to_nums=False)
+
+
+    # remove cols to exclude from ML (but that were needed for processing)
+    if len(MLexcludecols) > 0:
+        for col in MLexcludecols:
+            df = df.drop(col, axis=1)
+            features.remove(col)
+
+    ######### Machine learning #########
+
     features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(df, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
 
     # create model:
@@ -874,6 +894,13 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
     y_pred = mod.predict(X_test)
     sklearn.metrics.roc_auc_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
+
+    # accuracies:
+    train_acc = mod.score(X_train, y_train)
+    test_acc = mod.score(X_test, y_test)
+    rand_acc = (float(sum(y))/len(y))
+
+    ######### Plotting & outputs #########
 
 
     if toPlot == True:
@@ -896,6 +923,10 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
         plt.legend(loc=2)
         plt.show()
 
+        # plot feature importances:
+        plot_feature_importances_randforest(mod, X_names)
+
+    if toPrint == True:
         # test pvals 1st and 2nd set:
         print p1
         print p2
@@ -904,23 +935,20 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
         ###### assess performance:
         mod.fit(X_train, y_train)
-        print 'training accuracy:', mod.score(X_train, y_train)
-        print 'test accuracy:', mod.score(X_test, y_test)
+        print 'training accuracy:', train_acc
+        print 'test accuracy:', test_acc
         print 'num actual positives = %s' % sum(y)
         print 'num actual negatives = %s' % (len(y) - sum(y))
-        print 'random accuracy would be %s' % (float(sum(y))/len(y))
+        print 'random accuracy would be %s' % rand_acc
         print '\n'
 
         # feature importances:
-
-        print 'feature importances:'
-        S = pd.Series(mod.feature_importances_, index=X_names, name="feature importances")
-        print S.sort_values()
-
-
-    return mod, features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test
+#        print 'feature importances:'
+#        S = pd.Series(mod.feature_importances_, index=X_names, name="feature importances")
+#        print S.sort_values()
 
 
+    return mod, features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc
 
 
 
@@ -928,6 +956,26 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 #############################
 ## Visualization functions ##
 #############################
+
+
+def plot_feature_importances_randforest(model, X_names):
+    '''
+    Builds barplot of feature importances for random forest.
+    model should be a randomForest model, already trained.
+    X_names are the names of the features.
+    '''
+
+    importances = model.feature_importances_
+    indices = np.argsort(importances)#[::-1]
+    plt.figure(figsize=(3, 7))
+    plt.title('Feature importances')
+    plt.barh(range(len(X_names)), importances[indices], align='center', )
+    plt.ylim([-1, len(X_names)])
+    plt.yticks(range(len(X_names)), X_names[indices])
+    plt.xticks(rotation=90)
+#    for f in range(features):
+#        print ("%2d) %-*s %f" % (f+1, 30, features[f], importances[indices[f]]))
+    return plt
 
 
 def display_num_nulls_per_column(df):
@@ -1086,41 +1134,35 @@ def resample_to_match_distribution(df, distcol, splitcol, splitVal_resample, spl
 
 
 
+@contextmanager
+def suppress_stdout():
+    '''
+    From http://thesmithfam.org/blog/2012/10/25/temporarily-suppress-console-output-in-python/
+    Suppresses print statements for a function call.
 
-#######################################
-## from Python Machine Learning book ##
-#######################################
-def plot_decision_regions(X, y, classifier,
-                       test_idx=None, resolution=0.02):
+    Use like:
+
+    print "You can see this"
+    with suppress_stdout():
+        print "You cannot see this"
+    print "And you can see this again"
+
     '''
-    Plot a 2-column X vs y, given a trained classifier
-    '''
-    # setup marker generator and color map
-    markers = ('s', 'x', 'o', '^', 'v')
-    colors = ('red', 'blue', 'lightgreen', 'gray', 'cyan')
-    cmap = ListedColormap(colors[:len(np.unique(y))])
-    # plot the decision surface
-    x1_min, x1_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-    x2_min, x2_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-    xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),
-                            np.arange(x2_min, x2_max, resolution))
-    Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
-    Z = Z.reshape(xx1.shape)
-    plt.contourf(xx1, xx2, Z, alpha=0.4, cmap=cmap)
-    plt.xlim(xx1.min(), xx1.max())
-    plt.ylim(xx2.min(), xx2.max())
-    # plot all samples
-    X_test, y_test = X[test_idx, :], y[test_idx]
-    for idx, cl in enumerate(np.unique(y)):
-        plt.scatter(x=X[y == cl, 0], y=X[y == cl, 1],
-                   alpha=0.8, c=cmap(idx),
-                    marker=markers[idx], label=cl)
-    # highlight test samples
-    if test_idx:
-        X_test, y_test = X[test_idx, :], y[test_idx]
-        plt.scatter(X_test[:, 0], X_test[:, 1], c='',
-                alpha=1.0, linewidth=1, marker='o',
-                s=55, label='test set')
+
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+
+
+
+
+
+
+
 
 
 
