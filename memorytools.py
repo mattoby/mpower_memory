@@ -580,11 +580,6 @@ def extract_health_history_words(data):
     Might be useful... text analysis...
     '''
 
-def define_feature_nicenames():
-    pass
-#    return fnicenames
-
-
 
 def define_feature_categories():
     fcats = {}
@@ -639,6 +634,50 @@ def define_feature_categories():
 
     fcats['person'] = ['healthCode']
     return fcats
+
+def feature_names(features):
+    '''
+    Names for all the features (for display)
+    returns a list of feature names corresponding to the features input
+    '''s
+
+    featurenames={
+        'age':                  'age',
+        'gender':               'gender',
+        'education':            'education',
+        'game_numFails':        '# failed games',
+        'game_score':           'memory score (overall)',
+        'game_numGames':        '# games played',
+        '9_numsuccesses':       '# successful taps (3x3)',
+        '9_numunsuccesses':     '# unsuccessful taps (3x3)',
+        '9_meandist':           'mean distance (3x3)',
+        '9_successful':         '# successful taps (3x3)',
+        '9_gamescore':          'memory score (3x3)',
+        '9_latency':            'reaction time (3x3)',
+        '9_firstdist':          'first tap distance (3x3)',
+        '9_meanDt':             'mean time between taps (3x3)',
+        '9_meansuccessfuldist': 'mean correct tap distance (3x3)',
+        '16_firstdist':         'first tap distance (4x4)',
+        '16_meandist':          'mean tap distance (4x4)',
+        '16_numsuccesses':      '# successful taps (4x4)',
+        '16_gamescore':         'memory score (4x4)',
+        '16_latency':           'reaction time (4x4)',
+        '16_numunsuccesses':    '# unsuccessful taps (4x4)',
+        '16_successful':        '# successful taps (4x4)',
+        '16_meanDt':            'mean time between taps (4x4)',
+        '16_meansuccessfuldist':'mean correct tap distance (4x4)',
+        'played_game4':         'played 2x2 game',
+        'phoneInfo':            'phone screen size',
+        'smartphone':           'ease of phone use',
+        'hasParkinsons':        'has Parkinson''s?',
+        'medTimepoint':         'just took meds?',
+        'brainStim':            'had brain stimulation?',
+        'surgery':              'had surgery?',
+        'nyearsOnMeds':         '# years on medication',
+        'nyearsOffMeds':        '# years nonmedicated',
+        'nyearsParkinsons':     '# years of Parkinson''s',
+        'game_endDate':         'game date'
+        }
 
 
 
@@ -906,9 +945,9 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
     if toPlot == True:
         # plot first set:
         plt.figure()
-        sns.distplot(df_Parkinsons[distcol].dropna(), label='hasParkinsons')
-        sns.distplot(df_np[distcol].dropna(), label='no Parkinsons')
-        sns.distplot(df_resampled_np[distcol].dropna(), label='no Parkinsons, resampled')
+        sns.distplot(df_Parkinsons[distcol].dropna(), label='Parkinsons')
+        sns.distplot(df_np[distcol].dropna(), label='non Parkinsons')
+        sns.distplot(df_resampled_np[distcol].dropna(), label='non Parkinsons, resampled')
         plt.legend(loc=2)
         plt.show()
 
@@ -916,15 +955,16 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
         # plot second set:
         plt.figure()
-        sns.distplot(df_Parkinsons[distcol].dropna(), label='hasParkinsons')
-        sns.distplot(df_np[distcol].dropna(), label='no Parkinsons')
-        sns.distplot(df_resampled_np[distcol].dropna(), label='no Parkinsons, resampled')
+        sns.distplot(df_Parkinsons[distcol].dropna(), label='Parkinsons')
+        sns.distplot(df_np[distcol].dropna(), label='non Parkinsons')
+        sns.distplot(df_resampled_np[distcol].dropna(), label='non Parkinsons, resampled')
         sns.distplot(df_resampled_Park[distcol].dropna(), label='Parkinsons, resampled')
         plt.legend(loc=2)
         plt.show()
 
         # plot feature importances:
         plot_feature_importances_randforest(mod, X_names)
+
 
     if toPrint == True:
         # test pvals 1st and 2nd set:
@@ -958,11 +998,12 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 #############################
 
 
+
 def plot_feature_importances_randforest(model, X_names):
     '''
     Builds barplot of feature importances for random forest.
     model should be a randomForest model, already trained.
-    X_names are the names of the features.
+    X_names are the names of the features (np array)
     '''
 
     importances = model.feature_importances_
@@ -997,7 +1038,6 @@ def squaregridhistplot(features_df):
 
 
 
-
 #############################
 ## Miscellaneous functions ##
 #############################
@@ -1021,6 +1061,7 @@ def convert_regression_coefs_to_pdSeries(coef_, X_names):
 
 def test():
     return 1
+
 
 def column_ttests(df, ttestcol, ttestcolCutoff=0.5):
     '''
@@ -1129,9 +1170,6 @@ def resample_to_match_distribution(df, distcol, splitcol, splitVal_resample, spl
     df_resampled = df_resample.iloc[indsamples,:]
 
     return df_resampled, df_guide, df_resample
-
-
-
 
 
 @contextmanager
