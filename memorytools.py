@@ -639,9 +639,8 @@ def feature_names(features):
     '''
     Names for all the features (for display)
     returns a list of feature names corresponding to the features input
-    '''s
-
-    featurenames={
+    '''
+    fnames={
         'age':                  'age',
         'gender':               'gender',
         'education':            'education',
@@ -678,7 +677,8 @@ def feature_names(features):
         'nyearsParkinsons':     '# years of Parkinson''s',
         'game_endDate':         'game date'
         }
-
+    feature_names = [fnames[f] for f in features]
+    return feature_names
 
 
 #################################
