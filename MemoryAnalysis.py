@@ -1,4 +1,5 @@
-# Setup:
+## Startup:
+
 import synapseclient
 from synapseclient import Project, Folder, File
 import pandas as pd
@@ -15,10 +16,11 @@ from numpy import nan
 import seaborn as sns
 from scipy.stats import ttest_ind
 from scipy.stats import ranksums
-from sklearn.metrics import confusion_matrix
-%load_ext autoreload
-#%matplotlib inline
 %pylab
+%load_ext autoreload
+%autoreload 2
+#%matplotlib inline
+
 
 ## set options ##
 
@@ -53,8 +55,6 @@ data = mt.add_memory_game_features_to_data(filePaths, data, fromFile = fromFile,
 data = mt.add_composite_features_to_data(data)
 
 
-# ML setup:
-
 from sklearn import linear_model
 import sklearn
 import sklearn.linear_model
@@ -70,21 +70,60 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
-
-##############################################################
-##############################################################
-################### Do machine learning ######################
-##############################################################
-##############################################################
-
-
-#### deal with age confound
-
-# define features
+# load feature categories
 fcats = mt.define_feature_categories()
-features = fcats['game'] + fcats['demographic'] + ['hasParkinsons'] #+ fcats['output']
-#features.remove('medTimepoint')
-outs = mt.build_ML_model_age_corrected_and_samplebalanced(data, features, toPlot=False)
+
+from memorytools import *
+
+
+grouped.groups
+grouped.mean().head(2)
+
+
+data2 = data.copy()
+grouped = data2.groupby('healthCode')
+
+for healthCode, group in grouped:
+    group = group.dropna(subset=features)
+    newthing = group.mean()
+
+for healthCode, group in grouped:
+    print group
+    print healthCode
+
+
+# take 1, not mean. improve to mean later.
+print '\n\n\n'
+print df
+print '\n'
+features = ['c','b']
+for healthCode, group in grouped:
+
+    group = group.dropna(subset=features)
+#    groupmean = group.mean(numeric_only=False)
+    group_sample = group.sample(n=1)
+
+    print group
+    print '\n'
+    print group_sample
+#    print groupmean
+    print '\n'
+
+grouped = data.groupby('healthCode')
+data2 = grouped.apply(lambda x: x.sample(n=1))
+
+mean_with_strings()
+
+
+
+# within a group
+loop through feature columns
+if numerical, take mean
+if non-numerical, take 1st value.
+
+
+
+
 
 
 
