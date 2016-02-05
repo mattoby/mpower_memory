@@ -814,7 +814,7 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
     ##################### Set features up for machine learning:
 
     # split for cross validation:
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 8)
 
     y_combined = np.hstack((y_train, y_test))
 
@@ -830,10 +830,6 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
 
     else:
         return features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test
-
-
-
-
 
 
 
@@ -931,7 +927,7 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
     #  Confusion matrix:
     y_pred = mod.predict(X_test)
-    sklearn.metrics.roc_auc_score(y_test, y_pred)
+#    sklearn.metrics.roc_auc_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
 
     # accuracies:
