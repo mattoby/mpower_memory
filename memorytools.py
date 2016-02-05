@@ -843,7 +843,7 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
 
 
 
-def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=[1,1,1,1], toPrint=False, MLexcludecols=[]):
+def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='hasParkinsons', toPlot=[1,1,1,1,1,1], toPrint=False, MLexcludecols=[]):
     '''
     Does age correction & sample balancing, then runs random forest ML
 
@@ -926,8 +926,8 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
     #lr = linear_model.LogisticRegression(penalty='l1', C=0.1) # with regularization
     mod.fit(X_train, y_train)
 
-    # which features matter?
-    mat = mod.predict_proba(X_test)
+    # Probabilities predicted for test set to be in + class:
+    y_pred_proba = mod.predict_proba(X_test)[:,1]
 
     #  Confusion matrix:
     y_pred = mod.predict(X_test)
@@ -935,9 +935,13 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
     cm = confusion_matrix(y_test, y_pred)
 
     # accuracies:
+#    len()
     train_acc = mod.score(X_train, y_train)
     test_acc = mod.score(X_test, y_test)
     rand_acc = (float(sum(y))/len(y))
+    precision = sklearn.metrics.precision_score(y_true=y_test, y_pred=y_pred)
+    recall = sklearn.metrics.recall_score(y_true=y_test, y_pred=y_pred)
+    F1 = sklearn.metrics.f1_score(y_true=y_test, y_pred=y_pred)
 
     ######### Plotting & outputs #########
 
@@ -970,25 +974,31 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
         plt.show()
 
     if toPlot[3] == 1:
-        # plot feature importances:
+        render_confusion_matrix(y_test, y_pred)
+
+    if toPlot[4] == 1:
         plot_feature_importances_randforest(mod, X_names)
 
-
+    if toPlot[5] == 1:
+        plot_roc_curve(y_test, y_pred_proba)
 
     if toPrint == True:
         # test pvals 1st and 2nd set:
-        print p1
-        print p2
-
-#        print 'ranksum pval for sample balanced = %s' % p2
-
-        ###### assess performance:
-        mod.fit(X_train, y_train)
-        print 'training accuracy:', train_acc
-        print 'test accuracy:', test_acc
+        print '\n'
+        print 'ranksum pval for dist. resampling = %s' % p1[1]
+        print 'ranksum pval for sample balanced = %s' % p2[1]
+        print '\n'
         print 'num actual positives = %s' % sum(y)
         print 'num actual negatives = %s' % (len(y) - sum(y))
+        print '\n'
+        print '###### performance #######'
+        print 'precision:', precision
+        print 'recall:', recall
+        print 'F1:', F1
+        print 'training accuracy:', train_acc
+        print 'test accuracy:', test_acc
         print 'random accuracy would be %s' % rand_acc
+        print '##########################'
         print '\n'
 
         # feature importances:
@@ -997,7 +1007,7 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 #        print S.sort_values()
 
 
-    return mod, features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc
+    return mod, features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc, y_pred, y_pred_proba
 
 
 
@@ -1041,6 +1051,7 @@ def display_num_nulls_per_column(df):
     print 'Number of nulls per column:\n'
     print numnulls
 
+
 def squaregridhistplot(features_df):
     '''
     Plots a grid of plots, each row & col corresponding to a column in the dataframe, with contour maps for each pair & hists on the diagonal
@@ -1052,6 +1063,75 @@ def squaregridhistplot(features_df):
     return g
 
 
+def render_confusion_matrix(y_true, y_pred, pos_class=True, neg_class=False):
+    '''
+    Code adapted from Python Machine Learning book
+    name_pos_class is name of the positive class (string)
+    name_neg_class is name of the negative class (string)
+    Usually put y_test as y_true input
+    '''
+
+    #ax.set_axis_bgcolor('white')
+
+    # set style:
+    sns.set(style="white", color_codes=True, font_scale=1.5)
+    confmat = confusion_matrix(y_true=y_true, y_pred=y_pred)
+
+    # make plot:
+    fig, ax = plt.subplots(figsize=(2.5, 2.5))
+    ax.matshow(confmat, cmap=plt.cm.Blues, alpha=0.3)
+    for i in range(confmat.shape[0]):
+        for j in range(confmat.shape[1]):
+            ax.text(x=j, y=i, s=confmat[i, j], va='center', ha='center')
+
+    plt.xlabel('predicted label')
+    plt.ylabel('true label')
+
+    # fix labels:
+    ax.set(xticklabels=['', neg_class, pos_class, ''])
+    ax.set(yticklabels=['', neg_class, pos_class, ''])
+
+    plt.tight_layout()
+    plt.show()
+
+    # return to default (this is a hack..)
+    sns.set(style="darkgrid", color_codes=True, font_scale=1.5)
+
+
+def plot_roc_curve(y_true, y_predictedprobs):
+    '''
+    Plots an roc curve.
+
+    For random forest:
+    y_predictedprobs = model.predict_proba(X_test)[:,1]
+    '''
+
+    # set style:
+    sns.set(style="white", color_codes=True, font_scale=1.5)
+
+    # Compute ROC curve and ROC area for each class
+    fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true, y_predictedprobs)
+    roc_auc = sklearn.metrics.auc(fpr, tpr)
+
+    # Plot of a ROC curve for a specific class
+    plt.figure()
+    plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+
+    err = 0.01
+    plt.xlim([-err, 1])
+    plt.ylim([0.0, 1+err])
+    plt.axes().set_aspect('equal')
+    plt.show()
+
+    # return to default (this is a hack..)
+    sns.set(style="darkgrid", color_codes=True, font_scale=1.5)
+
+    return fpr, tpr, thresholds
 
 #############################
 ## Miscellaneous functions ##
