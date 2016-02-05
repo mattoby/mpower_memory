@@ -896,16 +896,9 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
     p2 = ranksums(a, b)
 
 
+
     ### Redo machine learning with these sets:
     df = df_resampled_np.append(df_resampled_Park)
-    # features = fcats['game'] + ['hasParkinsons']# + fcats['demographic'] + fcats['output']
-
-    #labelcol = 'hasParkinsons'
-    #display_num_nulls_per_column(df[features])
-
-    # labelcol goes in here, and is what is learned with the model:
-    #    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined = prep_memory_features_for_machine_learning(df, features, labelcol, convert_features_to_nums=False)
-
 
     # remove cols to exclude from ML (but that were needed for processing)
     if len(MLexcludecols) > 0:
