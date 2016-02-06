@@ -76,55 +76,31 @@ fcats = mt.define_feature_categories()
 from memorytools import *
 
 
-grouped.groups
-grouped.mean().head(2)
-
-
-data2 = data.copy()
-grouped = data2.groupby('healthCode')
-
-for healthCode, group in grouped:
-    group = group.dropna(subset=features)
-    newthing = group.mean()
-
-for healthCode, group in grouped:
-    print group
-    print healthCode
-
-
-# take 1, not mean. improve to mean later.
-print '\n\n\n'
-print df
-print '\n'
-features = ['c','b']
-for healthCode, group in grouped:
-
-    group = group.dropna(subset=features)
-#    groupmean = group.mean(numeric_only=False)
-    group_sample = group.sample(n=1)
-
-    print group
-    print '\n'
-    print group_sample
-#    print groupmean
-    print '\n'
-
-grouped = data.groupby('healthCode')
-data2 = grouped.apply(lambda x: x.sample(n=1))
-
-mean_with_strings()
+#######################################################
 
 
 
-# within a group
-loop through feature columns
-if numerical, take mean
-if non-numerical, take 1st value.
+# simplified code when not sample balancing:
+# (with other memory features)
 
+# take only one record per patient to remove duplicates. mean is better, but that's later..
 
+features = fcats['game'] + ['hasParkinsons'] + fcats['demographic'] + fcats['phone'] + ['healthCode']
+features.remove('smartphone')
+features.remove('gender')
+#print features
+featureToMean = ['healthCode'] # don't need to also exclude - this step takes care of that too.
+MLexcludecols = []
+labelcol = 'hasParkinsons'
 
-
-
+# redo data so i take 1 sample of each patient.
+#grouped = data.groupby('healthCode')
+#datasample = grouped.apply(lambda x: x.sample(n=1))
+# remove young patients:
+#datasample = datasample[datasample['age']>50]
+#print features
+outs = mt.build_ML_model(data, features, labelcol=labelcol, toPlot=[1,1,1], toPrint=True, MLexcludecols=MLexcludecols, modelType='randomforest', featureToMean=featureToMean)
+model, fdf, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc, y_pred, y_pred_proba = outs
 
 
 

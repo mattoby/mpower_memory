@@ -795,6 +795,7 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
     ##################### Preprocess data for machine learning:
     # define features (include the label feature here:
 #    features = ['game_score', 'age', 'hasParkinsons']
+#    print features
     features_df = data[features]
     if convert_features_to_nums:
         features_df = convert_features_to_numbers(features_df)
@@ -999,7 +1000,8 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
 
 
-def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randforest'):
+def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randomforest', featureToMean=[]):
+
     '''
     This will run random forest on the parkinsons dataframe.
     Ugly to have this and the age corrected version. Need to reconcile them.
@@ -1025,7 +1027,12 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
     len2 = len(fdf)
     print 'dropped %s rows to remove all nas from data' % (len1 - len2)
 
-    # resample here, if needed.
+    # optionally boil each patient down to his mean:
+    # (note, will also exclude this column & turn it into the index!)
+    if len(featureToMean) > 0:
+        grouped = fdf.groupby(featureToMean)
+        fdf = grouped.apply(lambda x: x.mean())
+        features.remove(featureToMean[0])
 
     # remove cols to exclude from ML (but that were needed for processing)
     if len(MLexcludecols) > 0:
@@ -1036,6 +1043,7 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
     # prep feature matrix for machine learning:
     features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
 
+
     ######### Machine learning #########
     if modelType == 'randomforest':
         model = RandomForestClassifier(n_estimators=100)
@@ -1044,12 +1052,9 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         y_pred_proba = model.predict_proba(X_test)[:,1]
         y_pred = model.predict(X_test)
 #    elif modelType == 'logisticregression':
-#
 #        model = linear_model.LogisticRegression(penalty='l1', C=0.1) # with regularization
 #        model.fit(X_train, y_train)
 #        y_pred_proba
-
-
 
     # Accuracies:
     train_acc = model.score(X_train, y_train)
