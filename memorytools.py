@@ -44,7 +44,7 @@ from sklearn.metrics import confusion_matrix
 #####################################
 
 
-
+agecutoff = 45 # age below which there are almost no Parkinsons patients
 
 ###############################
 ## Pulling data from synapse ##
@@ -1000,8 +1000,18 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 
 
 
-def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randomforest', featureToMean=[]):
 
+
+sampleBalanceDefaultParams = {
+    'distcol':'age',
+    'splitcol':'hasParkinsons',
+    'nbins':10,
+    'nResamples':600,
+    'splitVal_resample':False,
+    'splitVal_guide':True,
+    }
+
+def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randomforest', featureToMean=[], sampleBalance=False, sampleBalanceParams=sampleBalanceDefaultParams):
     '''
     This will run random forest on the parkinsons dataframe.
     Ugly to have this and the age corrected version. Need to reconcile them.
@@ -1033,6 +1043,30 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         grouped = fdf.groupby(featureToMean)
         fdf = grouped.apply(lambda x: x.mean())
         features.remove(featureToMean[0])
+
+        print '# left in labelcol: ', fdf[labelcol].sum()
+        print '# total in labelcol: ', len(fdf[labelcol])
+
+    # optionally resample after boiling down to mean:
+    if sampleBalance == True:
+        # define the columns to sample balance on:
+        distcol = sampleBalanceParams['distcol'] # 'age'
+        splitcol = sampleBalanceParams['splitcol'] # 'hasParkinsons'
+        nbins = sampleBalanceParams['nbins'] # 10
+        nResamples = sampleBalanceParams['nResamples'] #600
+        splitVal_resample = sampleBalanceParams['splitVal_resample'] # False
+        splitVal_guide = sampleBalanceParams['splitVal_guide'] # True
+        # resample non-Park to same age distribution as Parkinsons:
+        df_resampled, df_guide, df_resample = resample_to_match_distribution(fdf, distcol, splitcol, splitVal_resample, splitVal_guide, nbins, nResamples)
+
+        # test pval (we want this to not be significant):
+        a = df_resampled[distcol].dropna().values
+        b = df_guide[distcol].dropna().values
+        p1 = ranksums(a, b)
+        print 'pval for resampling (want nonsignificant): ', p1[1]
+
+        # resample Park to the resampled non-Park for sample balancing:
+        fdf = df_resampled.append(df_guide)
 
     # remove cols to exclude from ML (but that were needed for processing)
     if len(MLexcludecols) > 0:
