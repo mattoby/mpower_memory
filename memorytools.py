@@ -1082,13 +1082,19 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
     if modelType == 'randomforest':
         model = RandomForestClassifier(n_estimators=100)
         model.fit(X_train, y_train)
-        # Probabilities predicted for test set to be in + class:
-        y_pred_proba = model.predict_proba(X_test)[:,1]
-        y_pred = model.predict(X_test)
-#    elif modelType == 'logisticregression':
-#        model = linear_model.LogisticRegression(penalty='l1', C=0.1) # with regularization
-#        model.fit(X_train, y_train)
-#        y_pred_proba
+        importances = model.feature_importances_
+        print importances
+    elif modelType == 'logisticregression':
+#        model = linear_model.LogisticRegression(penalty='l1', C=0.1)
+        model = linear_model.LogisticRegression(penalty='l1', C=1000)
+        model.fit(X_train, y_train)
+        importances = np.array(model.coef_[0])
+        print importances
+
+    # Probabilities predicted for test set to be in + class:
+    y_pred_proba = model.predict_proba(X_test)[:,1]
+    y_pred = model.predict(X_test)
+
 
     # Accuracies:
     train_acc = model.score(X_train, y_train)
@@ -1104,7 +1110,8 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         render_confusion_matrix(y_test, y_pred)
 
     if toPlot[1] == 1:
-        plot_feature_importances_randforest(model, X_names)
+#        plot_feature_importances_randforest(model, X_names)
+        plot_feature_importances(X_names, importances)
 
     if toPlot[2] == 1:
         plot_roc_curve(y_test, y_pred_proba)
@@ -1137,11 +1144,14 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
 
 
 
-def plot_feature_importances_randforest(model, X_names, useFeatureNames=True, importanceCutoff=0):
+def plot_feature_importances_randforest(model, X_names, useFeatureNames=True):
     '''
     Builds barplot of feature importances for random forest.
     model should be a randomForest model, already trained.
     X_names are the names of the features (np array)
+    importances = model.feature_importances_ for random forest
+    importances = model.get_params() for logistic regression
+    should deprecate this one...
     '''
 
     # get nice feature names for plot:
@@ -1151,6 +1161,34 @@ def plot_feature_importances_randforest(model, X_names, useFeatureNames=True, im
         fnames = X_names
 
     importances = model.feature_importances_
+    indices = np.argsort(importances)#[::-1]
+    plt.figure(figsize=(3, 7))
+    plt.title('Feature importances')
+    plt.barh(range(len(fnames)), importances[indices], align='center', )
+    plt.ylim([-1, len(fnames)])
+    plt.yticks(range(len(fnames)), fnames[indices])
+    plt.xticks(rotation=90)
+#    for f in range(features):
+#        print ("%2d) %-*s %f" % (f+1, 30, features[f], importances[indices[f]]))
+    return plt
+
+
+def plot_feature_importances(X_names, importances, useFeatureNames=True):
+    '''
+    Need to fix this code..
+    Builds barplot of feature importances for random forest.
+    model should be a randomForest model, already trained.
+    X_names are the names of the features (np array)
+    importances = model.feature_importances_ for random forest
+    importances = model.get_params() for logistic regression
+    '''
+
+    # get nice feature names for plot:
+    if useFeatureNames:
+        fnames = feature_names(X_names)
+    else:
+        fnames = X_names
+
     indices = np.argsort(importances)#[::-1]
     plt.figure(figsize=(3, 7))
     plt.title('Feature importances')
