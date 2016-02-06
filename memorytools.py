@@ -995,8 +995,99 @@ def build_ML_model_age_corrected_and_samplebalanced(data, features, labelcol='ha
 #        S = pd.Series(mod.feature_importances_, index=X_names, name="feature importances")
 #        print S.sort_values()
 
-
     return mod, features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc, y_pred, y_pred_proba, fdf
+
+
+
+def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randforest'):
+    '''
+    This will run random forest on the parkinsons dataframe.
+    Ugly to have this and the age corrected version. Need to reconcile them.
+
+    To take 1 sample of each patient:
+
+    grouped = data.groupby('healthCode')
+    datasamp = grouped.apply(lambda x: x.sample(n=1))
+    # remove young patients:
+    datasamp = datasamp[datasamp['age']>50]
+
+    To take mean of each patient:
+
+    '''
+
+    # build features dataframe:
+    fdf = data[features]
+    fdf = convert_features_to_numbers(fdf)
+
+    # drop nas:
+    len1 = len(fdf)
+    fdf = fdf.dropna()
+    len2 = len(fdf)
+    print 'dropped %s rows to remove all nas from data' % (len1 - len2)
+
+    # resample here, if needed.
+
+    # remove cols to exclude from ML (but that were needed for processing)
+    if len(MLexcludecols) > 0:
+        for col in MLexcludecols:
+            fdf = fdf.drop(col, axis=1)
+            features.remove(col)
+
+    # prep feature matrix for machine learning:
+    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
+
+    ######### Machine learning #########
+    if modelType == 'randomforest':
+        model = RandomForestClassifier(n_estimators=100)
+        model.fit(X_train, y_train)
+        # Probabilities predicted for test set to be in + class:
+        y_pred_proba = model.predict_proba(X_test)[:,1]
+        y_pred = model.predict(X_test)
+#    elif modelType == 'logisticregression':
+#
+#        model = linear_model.LogisticRegression(penalty='l1', C=0.1) # with regularization
+#        model.fit(X_train, y_train)
+#        y_pred_proba
+
+
+
+    # Accuracies:
+    train_acc = model.score(X_train, y_train)
+    test_acc = model.score(X_test, y_test)
+    rand_acc = (float(sum(y))/len(y))
+    precision = sklearn.metrics.precision_score(y_true=y_test, y_pred=y_pred)
+    recall = sklearn.metrics.recall_score(y_true=y_test, y_pred=y_pred)
+    F1 = sklearn.metrics.f1_score(y_true=y_test, y_pred=y_pred)
+
+    ######### Plotting & outputs #########
+
+    if toPlot[0] == 1:
+        render_confusion_matrix(y_test, y_pred)
+
+    if toPlot[1] == 1:
+        plot_feature_importances_randforest(model, X_names)
+
+    if toPlot[2] == 1:
+        plot_roc_curve(y_test, y_pred_proba)
+
+    if toPrint == True:
+        # test pvals 1st and 2nd set:
+        print '\n'
+        print 'num actual positives = %s' % sum(y)
+        print 'num actual negatives = %s' % (len(y) - sum(y))
+        print '\n'
+        print '###### performance #######'
+        print 'precision:', precision
+        print 'recall:', recall
+        print 'F1:', F1
+        print 'training accuracy:', train_acc
+        print 'test accuracy:', test_acc
+        print 'random accuracy would be %s' % rand_acc
+        print '##########################'
+        print '\n'
+
+    return model, fdf, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc, y_pred, y_pred_proba
+
 
 
 
