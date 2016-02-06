@@ -1137,7 +1137,7 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
 
 
 
-def plot_feature_importances_randforest(model, X_names, useFeatureNames=True):
+def plot_feature_importances_randforest(model, X_names, useFeatureNames=True, importanceCutoff=0):
     '''
     Builds barplot of feature importances for random forest.
     model should be a randomForest model, already trained.
@@ -1217,7 +1217,7 @@ def render_confusion_matrix(y_true, y_pred, pos_class=True, neg_class=False):
     sns.set(style="darkgrid", color_codes=True, font_scale=1.5)
 
 
-def plot_roc_curve(y_true, y_predictedprobs):
+def plot_roc_curve(y_true, y_predictedprobs, startNewPlot=True, withLabel=True):
     '''
     Plots an roc curve.
 
@@ -1232,25 +1232,72 @@ def plot_roc_curve(y_true, y_predictedprobs):
     fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true, y_predictedprobs)
     roc_auc = sklearn.metrics.auc(fpr, tpr)
 
+    if startNewPlot:
+        plt.figure()
+
+
     # Plot of a ROC curve for a specific class
-    plt.figure()
-    plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % roc_auc)
+    if withLabel:
+        plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % roc_auc)
+    else:
+        plt.plot(fpr, tpr)
+
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Receiver operating characteristic example')
+    plt.title('Receiver operating characteristic')
     plt.legend(loc="lower right")
 
     err = 0.01
     plt.xlim([-err, 1])
     plt.ylim([0.0, 1+err])
     plt.axes().set_aspect('equal')
-    plt.show()
+#    plt.show()
 
     # return to default (this is a hack..)
     sns.set(style="darkgrid", color_codes=True, font_scale=1.5)
 
     return fpr, tpr, thresholds
+
+
+def plot_roc_curves_with_mean(y_trues, y_pred_probas):
+    '''
+    y_trues and y_pred_probas are lists of length nIters,
+    with a y_true and a y_predicted_probability vector in
+    each list element (as come out of a machine learning model)
+    '''
+
+    nIters = len(y_trues)
+    mean_tpr = 0.0
+    mean_fpr = np.linspace(0, 1, 100)
+    all_tpr = []
+
+    plt.figure()
+
+    for iter in range(nIters):
+       probas = y_pred_probas[iter]
+       y_true = y_trues[iter]
+       fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true, probas)
+       mean_tpr += np.interp(mean_fpr, fpr, tpr)
+       mean_tpr[0] = 0.0
+       roc_auc = sklearn.metrics.auc(fpr, tpr)
+       plot_roc_curve(y_true, probas, startNewPlot=False, withLabel=False)
+
+    # determine mean line:
+    mean_tpr /= nIters
+    mean_tpr[-1] = 1.0
+    mean_auc = sklearn.metrics.auc(mean_fpr, mean_tpr)
+    plt.plot(mean_fpr, mean_tpr, 'k--',
+            label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
+
+    plt.plot([0, 1], [0, 1], 'k-')
+    plt.legend(loc="lower right")
+    plt.show()
+
+    # return the style:
+    sns.set(style="darkgrid", color_codes=True, font_scale=1.5)
+
+
 
 #############################
 ## Miscellaneous functions ##

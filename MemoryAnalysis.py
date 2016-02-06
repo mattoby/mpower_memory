@@ -126,7 +126,7 @@ for iter in range(nIters):
 #cv = KFold(len(y), n_folds=3)
 #
 
-plot_auc_curves_with_mean()
+
 mean_tpr = 0.0
 mean_fpr = np.linspace(0, 1, 100)
 all_tpr = []
@@ -164,6 +164,52 @@ plt.ylabel('True Positive Rate', fontsize=22)
 plt.title('Receiver Operating Characteristic with Cross Validation', fontsize=22)
 plt.legend(loc="lower right")
 plt.show()
+
+
+
+#################################
+###########fix it up here:
+#################################
+#################################
+#################################
+#################################
+#################################
+#################################
+
+y_trues = y_tests
+def plot_roc_curves_with_mean(y_trues, y_pred_probas):
+    '''
+    y_trues and y_pred_probas are lists of length nIters,
+    with a y_true and a y_predicted_probability vector in
+    each list element (as come out of a machine learning model)
+    '''
+    mean_tpr = 0.0
+    mean_fpr = np.linspace(0, 1, 100)
+    all_tpr = []
+
+    plt.figure()
+
+    for iter in range(nIters):
+       probas = y_pred_probas[iter]
+       y_true = y_trues[iter]
+       fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true, probas)
+       mean_tpr += interp(mean_fpr, fpr, tpr)
+       mean_tpr[0] = 0.0
+       roc_auc = sklearn.metrics.auc(fpr, tpr)
+       plot_roc_curve(y_true, probas, startNewPlot=False, withLabel=False)
+
+    # determine mean line:
+    mean_tpr /= nIters
+    mean_tpr[-1] = 1.0
+    mean_auc = sklearn.metrics.auc(mean_fpr, mean_tpr)
+    plt.plot(mean_fpr, mean_tpr, 'k--',
+            label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
+
+    plt.plot([0, 1], [0, 1], 'k-')
+    plt.legend(loc="lower right")
+    plt.show()
+
+
 
 
 
