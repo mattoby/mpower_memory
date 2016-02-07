@@ -798,9 +798,15 @@ def convert_features_to_numbers(features_df, feature_ordinal_maps=feature_ordina
 #    df = ordinate_categorical_col(df, 'gender', gender_code)
 #    df = ordinate_categorical_col(df, 'phoneUsage', phoneUsage_code)
 #    df = ordinate_categorical_col(df, 'phoneInfo', phoneInfo_code)
-    print 'Features converted to numbers:\n'
+    print 'Features converted to numbers:'
     print featureschanged #smartphone, education, gender, phoneUsage, phoneInfo'
 
+    # convert boolean columns to ints (because of bug? in pandas):
+    boolcols_to_convert_to_int = ['brainStim']
+    for col in boolcols_to_convert_to_int:
+        if col in df.columns:
+            df = convert_boolean_col_to_int(df, col)
+            print '%s converted to int' % col
     return df
 
 
@@ -1381,10 +1387,28 @@ def plot_roc_curves_with_mean(y_trues, y_pred_probas):
 ## Miscellaneous functions ##
 #############################
 
+def convert_boolean_col_to_int(df, col):
+    '''
+    This function deals with a (potential bug?) problem in pandas
+    When doing groupby, sometimes boolean columns are dropped, as
+    they seem to not be treated as numbers (sometimes not - i'm not
+    sure why). This function will take a boolean column in df and
+    will convert it to integer, and will leave any other values
+    alone (i.e., nans will stay as nans).
+
+    '''
+    df = df.copy()
+    S = df[col].copy()
+    S[S==False] = S[S==False].astype(int)
+    S[S==True] = S[S==True].astype(int)
+    df[col] = S
+    return df
+
 def groupby_col_and_avg_other_cols(df, col, keepColinDf=False):
     '''
     dataframe must be all numeric (aside from 'col' column)
-    this groups by values in 'col', and then averages the values for all other columns corresponding to each unique value in 'col'.
+    this groups by values in 'col', and then averages the values
+    for all other columns corresponding to each unique value in 'col'.
     will keep 'col' in the output df if keepColinDf is true
     '''
     grouped = df.groupby(col)
