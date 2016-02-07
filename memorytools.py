@@ -323,6 +323,8 @@ def pull_features_from_memory_game(game):
     def memorysuccesses(touchsamples):
         '''
         returns success status of each touch sample
+        successes = record of touch successes [True, False, False]
+        successful = if game was successful (success in all touches)
         '''
         successes = []
         for ts in touchsamples:
@@ -650,7 +652,7 @@ def feature_names(features):
         '9_numsuccesses':       '# successful taps (3x3)',
         '9_numunsuccesses':     '# unsuccessful taps (3x3)',
         '9_meandist':           'mean distance (3x3)',
-        '9_successful':         '# successful taps (3x3)',
+        '9_successful':         '% games won (3x3)',
         '9_gamescore':          'memory score (3x3)',
         '9_latency':            'reaction time (3x3)',
         '9_firstdist':          'first tap distance (3x3)',
@@ -662,7 +664,7 @@ def feature_names(features):
         '16_gamescore':         'memory score (4x4)',
         '16_latency':           'reaction time (4x4)',
         '16_numunsuccesses':    '# unsuccessful taps (4x4)',
-        '16_successful':        '# successful taps (4x4)',
+        '16_successful':        '% games won (4x4)',
         '16_meanDt':            'mean time between taps (4x4)',
         '16_meansuccessfuldist':'mean correct tap distance (4x4)',
         'played_game4':         'played 2x2 game',
@@ -688,6 +690,7 @@ def feature_names(features):
 def convert_features_to_numbers(features_df):
     '''
     Prep step of particular features, which are categorical (but ordered) and should be converted to ordinal or cardinal #'s - this converts them to numbers for import to machine learning model.
+    Will not convert columns that are already completely non-strings
     Should be fixed to deal better with nans.
     '''
     df = pd.DataFrame.copy(features_df)
@@ -748,9 +751,13 @@ def convert_features_to_numbers(features_df):
     for feature in fcodes:
 #        print 'feature = %s' % feature
         if feature in df:
-#            print 'featuretochange = %s' % feature
-            df = ordinate_categorical_col(df, feature, fcodes[feature])
-            featureschanged.append(feature)
+            # check that the feature hasn't already been changed:
+            # (this tests if there are strings still in the column)
+            hasStrings = check_for_string_in_dfcol(df, feature)
+            if hasStrings:
+                # print 'featuretochange = %s' % feature
+                df = ordinate_categorical_col(df, feature, fcodes[feature])
+                featureschanged.append(feature)
 
 #    df = ordinate_categorical_col(df, 'smartphone', smartphone_code)
 #    df = ordinate_categorical_col(df, 'education', education_code)
@@ -799,8 +806,8 @@ def prep_memory_features_for_machine_learning(data, features, labelcol, convert_
     features_df = data[features]
     if convert_features_to_nums:
         features_df = convert_features_to_numbers(features_df)
-    features_df = move_col_to_end_of_df(features_df, 'hasParkinsons')
-
+    #features_df = move_col_to_end_of_df(features_df, 'hasParkinsons')
+    features_df = move_col_to_end_of_df(features_df, labelcol)
     # do more processing here, in case of features with lots of nas?
 
     # drop na rows:
@@ -1040,8 +1047,7 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
     # optionally boil each patient down to his mean:
     # (note, will also exclude this column & turn it into the index!)
     if len(featureToMean) > 0:
-        grouped = fdf.groupby(featureToMean)
-        fdf = grouped.apply(lambda x: x.mean())
+        fdf = groupby_col_and_avg_other_cols(fdf, featureToMean)
         features.remove(featureToMean[0])
 
         print '# left in labelcol: ', fdf[labelcol].sum()
@@ -1065,7 +1071,7 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         p1 = ranksums(a, b)
         print 'pval for resampling (want nonsignificant): ', p1[1]
 
-        # resample Park to the resampled non-Park for sample balancing:
+        # combine back the datasets:
         fdf = df_resampled.append(df_guide)
 
     # remove cols to exclude from ML (but that were needed for processing)
@@ -1077,19 +1083,18 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
     # prep feature matrix for machine learning:
     features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
 
-
     ######### Machine learning #########
     if modelType == 'randomforest':
         model = RandomForestClassifier(n_estimators=100)
         model.fit(X_train, y_train)
         importances = model.feature_importances_
-        print importances
+#        print importances
     elif modelType == 'logisticregression':
 #        model = linear_model.LogisticRegression(penalty='l1', C=0.1)
         model = linear_model.LogisticRegression(penalty='l1', C=1000)
         model.fit(X_train, y_train)
         importances = np.array(model.coef_[0])
-        print importances
+#        print importances
 
     # Probabilities predicted for test set to be in + class:
     y_pred_proba = model.predict_proba(X_test)[:,1]
@@ -1341,6 +1346,21 @@ def plot_roc_curves_with_mean(y_trues, y_pred_probas):
 ## Miscellaneous functions ##
 #############################
 
+def groupby_col_and_avg_other_cols(df, col, keepColinDf=False):
+    '''
+    dataframe must be all numeric (aside from 'col' column)
+    this groups by values in 'col', and then averages the values for all other columns corresponding to each unique value in 'col'.
+    will keep 'col' in the output df if keepColinDf is true
+    '''
+    grouped = df.groupby(col)
+    df = grouped.apply(lambda x: x.mean())
+
+    # note, the index of the output df is the unique vals from col
+    # this option makes them a new column as well (with same name)
+    if keepColinDf:
+        df[col] = df.index
+    return df
+
 def move_col_to_end_of_df(df, colname):
     '''
     moves column colname to be the last column of dataframe df
@@ -1495,7 +1515,16 @@ def suppress_stdout():
             sys.stdout = old_stdout
 
 
+def check_for_string_in_dfcol(df, col):
+    '''
+    Check if a column of a dataframe contains any strings
+    '''
+    hasString = False
+    for val in df[col].values:
+        if type(val)==str:
+            hasString = True
 
+    return hasString
 
 
 
