@@ -687,11 +687,52 @@ def feature_names(features):
 ## Machine Learning, data prep ##
 #################################
 
-def convert_features_to_numbers(features_df):
+# maps of different features to ordinal values
+feature_ordinal_maps = {
+    'education_code':
+        {'Some high school':2,
+        'High School Diploma/GED':4,
+        '2-year college degree':6,
+        'Some college':6,
+        '4-year college degree':8,
+        'Some graduate school':10,
+        "Master's Degree":10,
+        'Doctoral Degree':13},
+    ### Smartphone by difficulty description:
+    'smartphone_code':
+        {'Very easy':1,
+        'Easy':2,
+        'Neither easy nor difficult':3,
+        'Difficult':4,
+        'Very Difficult':5},
+    ### Gender (binary ordinates):
+    'gender_code':
+        {'Male':1,
+        'Female':0},
+    ### Phone Usage (what does this mean?):
+    'phoneUsage_code':
+        {'false':0,
+        'Not sure':1,
+        'true':2},
+    ### Phone Info (the phone used) (encoded as screen size):
+    'phoneInfo_code':
+        {'iPhone 5s (GSM)':4.0,
+        'iPhone 6':4.7,
+        'iPhone 6 Plus':5.5},
+    ### medTimepoint (note, this output is only of whether they are on meds)
+    'medTimepoint_code':
+        {"I don't take Parkinson medications":nan,
+        "Immediately before Parkinson medication":0.0,
+        "Another time":nan,
+        "Just after Parkinson medication (at your best)":1.0 }
+    }
+
+def convert_features_to_numbers(features_df, feature_ordinal_maps=feature_ordinal_maps, featuresToConvert =[]):
     '''
     Prep step of particular features, which are categorical (but ordered) and should be converted to ordinal or cardinal #'s - this converts them to numbers for import to machine learning model.
     Will not convert columns that are already completely non-strings
     Should be fixed to deal better with nans.
+    if featuresToConvert is empty, then it will convert all
     '''
     df = pd.DataFrame.copy(features_df)
 
@@ -718,34 +759,27 @@ def convert_features_to_numbers(features_df):
         return df
 
     ### Define maps of categories to ordinal values:
+    education_code =    feature_ordinal_maps['education_code']
+    smartphone_code =   feature_ordinal_maps['smartphone_code']
+    gender_code =       feature_ordinal_maps['gender_code']
+    phoneUsage_code =   feature_ordinal_maps['phoneUsage_code']
+    phoneInfo_code =    feature_ordinal_maps['phoneInfo_code']
+    medTimepoint_code = feature_ordinal_maps['medTimepoint_code']
 
-    ### Education by # years post-middleschool:
-    education_code = {'Some high school':2,
-    'High School Diploma/GED':4, '2-year college degree':6,
-    'Some college':6, '4-year college degree':8,
-    'Some graduate school':10, "Master's Degree":10,
-    'Doctoral Degree':13}
-    ### Smartphone by difficulty description:
-    smartphone_code = {'Very easy':1, 'Easy':2,
-    'Neither easy nor difficult':3, 'Difficult':4,
-    'Very Difficult':5}
-    ### Gender (binary ordinates):
-    gender_code = {'Male':1, 'Female':0}
-    ### Phone Usage (what does this mean?):
-    phoneUsage_code = {'false':0, 'Not sure':1, 'true':2}
-    ### Phone Info (the phone used) (encoded as screen size):
-    phoneInfo_code = {'iPhone 5s (GSM)':4.0, 'iPhone 6':4.7,
-    'iPhone 6 Plus':5.5}
-    ### medTimepoint (note, this output is only of whether they are on meds)
-    medTimepoint_code = {"I don't take Parkinson medications":nan, "Immediately before Parkinson medication":0.0, "Another time":nan, "Just after Parkinson medication (at your best)":1.0 }
-
-    ### do feature ordinations:
     fcodes = {'smartphone':smartphone_code,
     'education':education_code,
     'gender':gender_code,
     'phoneUsage':phoneUsage_code,
     'phoneInfo':phoneInfo_code,
     'medTimepoint':medTimepoint_code}
+
+    # determine which features to ordinate:
+    # if featuresToConvert is [], then this will pick all
+    if len(featuresToConvert) > 0:
+        fcodesgood = {}
+        for feature in featuresToConvert:
+            fcodesgood[feature] = fcodes[feature]
+            fcodes = fcodesgood
 
     featureschanged = []
     for feature in fcodes:
@@ -1036,6 +1070,7 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
 
     # build features dataframe:
     fdf = data[features]
+
     fdf = convert_features_to_numbers(fdf)
 
     # drop nas:
