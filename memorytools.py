@@ -36,6 +36,7 @@ import sklearn.preprocessing
 from sklearn.cross_validation import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
@@ -1060,9 +1061,10 @@ sampleBalanceDefaultParams = {
 
 def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randomforest', featureToMean=[], sampleBalance=False, sampleBalanceParams=sampleBalanceDefaultParams):
     '''
-    This will run random forest on the parkinsons dataframe.
+    This will run a classifier model on the parkinsons dataframe.
     Ugly to have this and the age corrected version. Need to reconcile them.
-
+    For classification models. to do regression, use build_ML_regression
+    Should combine these later too..
     To take 1 sample of each patient:
 
     grouped = data.groupby('healthCode')
@@ -1091,7 +1093,7 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         fdf = groupby_col_and_avg_other_cols(fdf, featureToMean)
         features.remove(featureToMean[0])
 
-        print '# left in labelcol: ', fdf[labelcol].sum()
+        print '# positive in labelcol: ', fdf[labelcol].sum()
         print '# total in labelcol: ', len(fdf[labelcol])
 
     # optionally resample after boiling down to mean:
@@ -1135,6 +1137,8 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         model = linear_model.LogisticRegression(penalty='l1', C=1000)
         model.fit(X_train, y_train)
         importances = np.array(model.coef_[0])
+
+
 #        print importances
 
     # Probabilities predicted for test set to be in + class:
@@ -1180,6 +1184,87 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
 
     return model, fdf, X, y, X_names, y_name, X_train, X_test, y_train, y_test, train_acc, test_acc, rand_acc, y_pred, y_pred_proba
 
+
+
+def build_ML_regression(data, features, labelcol='nyearsParkinsons', toPlot=[0], toPrint=True, MLexcludecols=[], modelType ='linearregression', featureToMean=[], sampleBalance=False, sampleBalanceParams=sampleBalanceDefaultParams):
+    '''
+    This will run a regression model on the parkinsons dataframe.
+    Ugly to have this and the age corrected version. Need to reconcile them.
+    For regression models. to do classification, use build_ML_model
+    Should combine these later too..
+
+    '''
+
+    # build features dataframe:
+    fdf = data[features]
+
+    fdf = convert_features_to_numbers(fdf)
+
+    # drop nas:
+    len1 = len(fdf)
+    fdf = fdf.dropna()
+    len2 = len(fdf)
+    print 'dropped %s rows to remove all nas from data' % (len1 - len2)
+
+    # optionally boil each patient down to his mean:
+    # (note, will also exclude this column & turn it into the index!)
+    if len(featureToMean) > 0:
+        fdf = groupby_col_and_avg_other_cols(fdf, featureToMean)
+        features.remove(featureToMean[0])
+
+        print '# positive in labelcol: ', fdf[labelcol].sum()
+        print '# total in labelcol: ', len(fdf[labelcol])
+
+    # optionally resample after boiling down to mean:
+    if sampleBalance == True:
+        # define the columns to sample balance on:
+        distcol = sampleBalanceParams['distcol'] # 'age'
+        splitcol = sampleBalanceParams['splitcol'] # 'hasParkinsons'
+        nbins = sampleBalanceParams['nbins'] # 10
+        nResamples = sampleBalanceParams['nResamples'] #600
+        splitVal_resample = sampleBalanceParams['splitVal_resample'] # False
+        splitVal_guide = sampleBalanceParams['splitVal_guide'] # True
+        # resample non-Park to same age distribution as Parkinsons:
+        df_resampled, df_guide, df_resample = resample_to_match_distribution(fdf, distcol, splitcol, splitVal_resample, splitVal_guide, nbins, nResamples)
+
+        # test pval (we want this to not be significant):
+        a = df_resampled[distcol].dropna().values
+        b = df_guide[distcol].dropna().values
+        p1 = ranksums(a, b)
+        print 'pval for resampling (want nonsignificant): ', p1[1]
+
+        # combine back the datasets:
+        fdf = df_resampled.append(df_guide)
+
+    # remove cols to exclude from ML (but that were needed for processing)
+    if len(MLexcludecols) > 0:
+        for col in MLexcludecols:
+            fdf = fdf.drop(col, axis=1)
+            features.remove(col)
+
+    # prep feature matrix for machine learning:
+    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
+
+    ######### Machine learning #########
+    if modelType == 'linearregression':
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+        importances = np.array(model.coef_)
+#        print importances
+
+    y_pred = model.predict(X_test)
+    y_pred_train = model.predict(X_train)
+
+#    plt.scatter
+#    model.predict(X_test)
+
+    # visualize outputs:
+    if toPlot[0] == 1:
+#        plot_feature_importances_randforest(model, X_names)
+        plot_feature_importances(X_names, importances)
+
+
+    return model, fdf, X, y, X_names, y_name, X_train, X_test, y_train, y_test, y_pred, y_pred_train
 
 
 
