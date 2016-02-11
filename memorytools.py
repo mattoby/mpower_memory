@@ -1274,6 +1274,48 @@ def build_ML_regression(data, features, labelcol='nyearsParkinsons', toPlot=[0],
 #############################
 
 
+def distplot_subplots_with_hue(df, hue, huevals, huelabels, Nplotrows, Nplotcols, figsize=(20,10)):
+
+    '''
+    Create series of subplots, where each is the distribution plot
+    of a different column in df (a pandas dataframe). The
+    plots will each have 2 colors, which correspond to the two values
+    of hue (which is a column in df). So, for example, if there is
+    a df of cancer characteristics, and column 'hascancer' specifies
+    whether a patient (row) has cancer, you will plot the distribution
+    of cancer and non-cancer patients for each column(=feature)
+    by setting hue='hascancer'.
+
+    To exclude some columns, run this function on dfplot here:
+    dfplot = df.loc[:,list(set(df.columns) - set(['cols','to','exclude'])) ]
+
+    inputs:
+    df = a pandas dataframe
+    hue = 'hascancer' (column name of the label variable to be plotted)
+    huevals = [0, 1] (the unique values in hue)
+    huelabels = ['normal','cancer'] (the names of the huevals)
+    Nplotrows = 2 (# of rows of subplots to plot)
+    Nplotcols = 5 (# of columns of subplots to plot)
+
+    '''
+
+    fig = plt.figure(figsize=figsize)
+
+    df1 = df.loc[df[hue]==huevals[0], :]
+    df2 = df.loc[df[hue]==huevals[1], :]
+
+    n = 1
+    for col in df:
+        if not(col==hue):
+            ax = fig.add_subplot(Nplotrows,Nplotcols,n)
+            plt.sca(ax)
+            sns.distplot(df1[col], label=huelabels[0])
+            sns.distplot(df2[col], label=huelabels[1])
+            plt.legend(loc=1)
+            n = n + 1
+
+#    return fig
+
 
 def plot_feature_importances_randforest(model, X_names, useFeatureNames=True):
     '''
