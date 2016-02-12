@@ -39,6 +39,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.grid_search import GridSearchCV
 
 #####################################
 ## fixed variables for memorytools ##
@@ -1059,7 +1061,13 @@ sampleBalanceDefaultParams = {
     'splitVal_guide':True,
     }
 
-def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randomforest', featureToMean=[], sampleBalance=False, sampleBalanceParams=sampleBalanceDefaultParams):
+gridSearchParams = {'param_grid':
+    {'C': [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300, 1000]},
+    'penalty':'l1',
+    'cv':10
+}
+
+def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toPrint=True, MLexcludecols=[], modelType ='randomforest', featureToMean=[], sampleBalance=False, sampleBalanceParams=sampleBalanceDefaultParams, gridsearch=False, gridSearchParams=gridSearchParams, StandardScale=False):
     '''
     This will run a classifier model on the parkinsons dataframe.
     Ugly to have this and the age corrected version. Need to reconcile them.
@@ -1124,7 +1132,26 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
             features.remove(col)
 
     # prep feature matrix for machine learning:
-    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
+
+#    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=False)
+
+    features_df, X, y, X_names, y_name, X_train, X_test, y_train, y_test, stdsc, X_train_std, X_test_std, X_combined_std, y_combined = prep_memory_features_for_machine_learning(fdf, features, labelcol, convert_features_to_nums=False, toStandardScale=True)
+
+    # if standard scaling, replace X's with scaled ones:
+    if StandardScale == True:
+        X_orig = X
+        X_test_orig = X_test
+        X_train_orig = X_train
+
+        X_train = X_train_std
+        X_test = X_test_std
+        X = X_combined_std
+        y = y_combined
+        assert (all(y==y_combined)), "the y vectors are not the same.."
+        print 'X_test, X_train, and model have been standardscaled.'
+       #! is y the same as y_combined? does it matter?
+
+
 
     ######### Machine learning #########
     if modelType == 'randomforest':
@@ -1133,8 +1160,22 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
         importances = model.feature_importances_
 #        print importances
     elif modelType == 'logisticregression':
-#        model = linear_model.LogisticRegression(penalty='l1', C=0.1)
-        model = linear_model.LogisticRegression(penalty='l1', C=1000)
+        if gridsearch == True:
+            # unpack params:
+            param_grid = gridSearchParams['param_grid']
+            penalty = gridSearchParams['penalty']
+            cv = gridSearchParams['cv']
+            # run gridsearch:
+            clf = GridSearchCV(LogisticRegression(penalty=penalty), param_grid=param_grid, cv=cv)
+            clf = clf.fit(X_train, y_train)
+            print 'best params: '
+            print clf.best_params_
+            model = clf.best_estimator_
+
+        else:
+            model = linear_model.LogisticRegression(penalty='l1', C=1000)
+
+
         model.fit(X_train, y_train)
         importances = np.array(model.coef_[0])
 
@@ -1153,6 +1194,9 @@ def build_ML_model(data, features, labelcol='hasParkinsons', toPlot=[0,0,0], toP
     precision = sklearn.metrics.precision_score(y_true=y_test, y_pred=y_pred)
     recall = sklearn.metrics.recall_score(y_true=y_test, y_pred=y_pred)
     F1 = sklearn.metrics.f1_score(y_true=y_test, y_pred=y_pred)
+
+    # if did standard scaling, convert back to reg scale now:
+    #?
 
     ######### Plotting & outputs #########
 
