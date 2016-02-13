@@ -19,7 +19,7 @@ import datetime
 from scipy.stats import ttest_ind
 from scipy.stats import ranksums
 from contextlib import contextmanager
-
+import scipy as sp
 
 from matplotlib.colors import ListedColormap
 
@@ -1316,6 +1316,107 @@ def build_ML_regression(data, features, labelcol='nyearsParkinsons', toPlot=[0],
 #############################
 ## Visualization functions ##
 #############################
+
+def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=True):
+    '''
+    This plots something like a pairgrid from seaborn, but will properly
+    handle a 'hue' variable. The hue variable is a column in df that has
+    2 values in it, which we want to visualize separately. So the plots
+    will each have 2 colors, which correspond to the two values of hue
+    (which is a column in df). So, for example, if there is a df of cancer
+    characteristics, and column 'hascancer' specifies whether a patient
+    (row) has cancer, you will plot the distribution of cancer and non-
+    cancer patients for each column(=feature) by setting hue='hascancer'.
+
+    The last row of the plot will correspond to the hue variable, and will
+    output distplots of the two values of hue, lined up with the plots
+    above.
+
+    To exclude some columns, run this function on dfplot here:
+    dfplot = df.loc[:,list(set(df.columns) - set(['cols','to','exclude'])) ]
+
+    inputs:
+
+    df = a pandas dataframe
+    hue = 'hascancer' (column name of the label variable to be plotted)
+    huevals = [0, 1] (the unique values in hue)
+    huelabels = ['normal','cancer'] (the names of the huevals)
+    figsize # the size of the figure, default (20,20)
+    DispCorrs # to display correlation coeffs? default is True
+
+    '''
+
+    fig = plt.figure(figsize=figsize)
+
+    # put hue col at end:
+    df = move_col_to_end_of_df(df, hue)
+
+    # split into dfs for each hue val:
+    df1 = df.loc[df[hue]==huevals[0],:]
+    df2 = df.loc[df[hue]==huevals[1],:]
+
+    # col = # of columns in df (not the same as subplot column):
+    cols = df1.columns
+    Ncols = len(cols)
+
+    # step through rows (iR) and columns (iC) of subplots:
+    for iR in xrange(1,Ncols):
+        for iC in xrange(0,iR):
+
+            # set the current subplot axis:
+            ax=plt.subplot(Ncols,Ncols,iR*Ncols+iC+1)
+
+            # determine the current data for this subplot:
+            xdata1 = df1[cols[iC]]
+            xdata2 = df2[cols[iC]]
+            xdata_all = df[cols[iC]]
+
+            ydata1 = df1[cols[iR]]
+            ydata2 = df2[cols[iR]]
+            ydata_all = df[cols[iR]]
+
+            # if on last row, do distplot of the hue column:
+            if iR == Ncols-1:
+                g = sns.distplot(xdata1, label=huelabels[0], color='blue')
+                sns.distplot(xdata2, label=huelabels[1], color='red')
+                plt.legend(loc=1)
+                g.set(yticklabels=[])
+
+            # otherwise, do a scatter plot:
+            else:
+
+                plt.scatter(xdata1,ydata1,alpha=0.2,color="blue")
+                plt.scatter(xdata2,ydata2,alpha=0.2,color="red")
+
+                ax.get_xaxis().set_ticks([])
+                ax.get_yaxis().set_ticks([])
+
+                # determine the correlations:
+                if DispCorrs:
+                    cc1 = sp.stats.pearsonr(xdata_all,ydata_all)[0]
+                    cc2 = sp.stats.spearmanr(xdata_all,ydata_all).correlation
+                    plt.title("Corr: %.2f | %.2f" % (cc1,cc2))
+
+                # set y_lim:
+                ymin = ydata_all.min()
+                ymax = ydata_all.max()
+                y_range = ymax - ymin
+                yedge = y_range*0.1
+                ax.set_ylim([ymin-yedge, ymax+yedge])
+
+            # set x_lim (including for the hue variable row):
+            xmin = xdata_all.min()
+            xmax = xdata_all.max()
+            x_range = xmax - ymin
+            xedge = x_range*0.1
+            ax.set_xlim([xmin-xedge, xmax+xedge])
+
+            # labels:
+            if (iC==0) & (iR < Ncols-1):
+                plt.ylabel(cols[iR])
+            if iR==Ncols-1:
+                plt.xlabel(cols[iC])
+
 
 
 def distplot_subplots_with_hue(df, hue, huevals, huelabels, Nplotrows, Nplotcols, figsize=(20,10)):
