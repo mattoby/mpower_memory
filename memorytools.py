@@ -1317,7 +1317,7 @@ def build_ML_regression(data, features, labelcol='nyearsParkinsons', toPlot=[0],
 ## Visualization functions ##
 #############################
 
-def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=True):
+def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=True, alpha=0.2, setloglog=False):
     '''
     This plots something like a pairgrid from seaborn, but will properly
     handle a 'hue' variable. The hue variable is a column in df that has
@@ -1346,6 +1346,18 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
 
     '''
 
+    # set the ratio of blank space on edges of plots:
+    edgeratio = 0.1
+
+    # if plotting loglog, remove zero entries from non-hue cols:
+    if setloglog==True:
+
+        nonhuecols = list(set(df.columns) - set([hue]))
+        for col in nonhuecols:
+            df = df.loc[df[col]>0,:]
+
+            ##why?
+
     fig = plt.figure(figsize=figsize)
 
     # put hue col at end:
@@ -1362,7 +1374,6 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
     # step through rows (iR) and columns (iC) of subplots:
     for iR in xrange(1,Ncols):
         for iC in xrange(0,iR):
-
             # set the current subplot axis:
             ax=plt.subplot(Ncols,Ncols,iR*Ncols+iC+1)
 
@@ -1385,8 +1396,8 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
             # otherwise, do a scatter plot:
             else:
 
-                plt.scatter(xdata1,ydata1,alpha=0.2,color="blue")
-                plt.scatter(xdata2,ydata2,alpha=0.2,color="red")
+                plt.scatter(xdata1,ydata1,alpha=alpha,color="blue")
+                plt.scatter(xdata2,ydata2,alpha=alpha,color="red")
 
                 ax.get_xaxis().set_ticks([])
                 ax.get_yaxis().set_ticks([])
@@ -1397,19 +1408,31 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
                     cc2 = sp.stats.spearmanr(xdata_all,ydata_all).correlation
                     plt.title("Corr: %.2f | %.2f" % (cc1,cc2))
 
-                # set y_lim:
+                # log axes, if desired:
+                if setloglog==True:
+                    ax.set_yscale('log')
+
+                                    # set y_lim:
                 ymin = ydata_all.min()
                 ymax = ydata_all.max()
                 y_range = ymax - ymin
-                yedge = y_range*0.1
+                yedge = y_range*edgeratio
                 ax.set_ylim([ymin-yedge, ymax+yedge])
+
+
+            # log axes, if desired:
+            if setloglog==True:
+                ax.set_xscale('log')
 
             # set x_lim (including for the hue variable row):
             xmin = xdata_all.min()
             xmax = xdata_all.max()
-            x_range = xmax - ymin
-            xedge = x_range*0.1
+            x_range = xmax - xmin
+
+            xedge = x_range*edgeratio
+        #            plt.xlim(xmin-xedge,xmax+xedge)
             ax.set_xlim([xmin-xedge, xmax+xedge])
+            print 'col:%s, row:%s, xmin: %s, xmax: %s, xedge: %s, ' % (cols[iC], cols[iR], xmin, xmax, xedge)
 
             # labels:
             if (iC==0) & (iR < Ncols-1):
@@ -1417,9 +1440,10 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
             if iR==Ncols-1:
                 plt.xlabel(cols[iC])
 
+#       fig.tight_layout()
+#    return fig, ax, xmin, xmax, xedge
 
-
-def distplot_subplots_with_hue(df, hue, huevals, huelabels, Nplotrows, Nplotcols, figsize=(20,10)):
+def distplot_subplots_with_hue(df, hue, huevals, huelabels, Nplotrows, Nplotcols, setxlog=False, figsize=(20,10), legendloc=1, rug=False):
 
     '''
     Create series of subplots, where each is the distribution plot
@@ -1454,10 +1478,17 @@ def distplot_subplots_with_hue(df, hue, huevals, huelabels, Nplotrows, Nplotcols
         if not(col==hue):
             ax = fig.add_subplot(Nplotrows,Nplotcols,n)
             plt.sca(ax)
-            sns.distplot(df1[col], label=huelabels[0])
-            sns.distplot(df2[col], label=huelabels[1])
-            plt.legend(loc=1)
+            sns.distplot(df1[col], label=huelabels[0], rug=rug)
+            sns.distplot(df2[col], label=huelabels[1], rug=rug)
+
+            # log axes, if desired:
+            if setxlog==True:
+                ax.set_xscale('log')
+
+            plt.legend(loc=legendloc)
             n = n + 1
+
+    fig.tight_layout()
 
 #    return fig
 
