@@ -645,6 +645,7 @@ def feature_names(features):
     Names for all the features (for display)
     returns a list of feature names corresponding to the features input
     '''
+
     fnames={
         'age':                  'age',
         'gender':               'gender',
@@ -1317,7 +1318,7 @@ def build_ML_regression(data, features, labelcol='nyearsParkinsons', toPlot=[0],
 ## Visualization functions ##
 #############################
 
-def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=True, alpha=0.2, setloglog=False):
+def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=True, alpha=0.2, setloglog=False, rename_features=False, legendLoc=1):
     '''
     This plots something like a pairgrid from seaborn, but will properly
     handle a 'hue' variable. The hue variable is a column in df that has
@@ -1343,6 +1344,10 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
     huelabels = ['normal','cancer'] (the names of the huevals)
     figsize # the size of the figure, default (20,20)
     DispCorrs # to display correlation coeffs? default is True
+
+    ex:
+    df = pd.DataFrame({'a':[1,2,3,10],'b':[4,5,6,100],'d':[10000,1000,100,1],'c':[1, 1, 0, 0]})
+    pairgrid_with_hues(df, 'c', [1, 0], ["one","zero"], alpha=1, setloglog=True, DispCorrs=False)
 
     '''
 
@@ -1390,7 +1395,7 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
             if iR == Ncols-1:
                 g = sns.distplot(xdata1, label=huelabels[0], color='blue')
                 sns.distplot(xdata2, label=huelabels[1], color='red')
-                plt.legend(loc=1)
+                plt.legend(loc=legendLoc)
                 g.set(yticklabels=[])
 
             # otherwise, do a scatter plot:
@@ -1408,37 +1413,49 @@ def pairgrid_with_hues(df, hue, huevals, huelabels, figsize=(20,20), DispCorrs=T
                     cc2 = sp.stats.spearmanr(xdata_all,ydata_all).correlation
                     plt.title("Corr: %.2f | %.2f" % (cc1,cc2))
 
-                # log axes, if desired:
-                if setloglog==True:
-                    ax.set_yscale('log')
-
-                                    # set y_lim:
+                # set y_lim:
                 ymin = ydata_all.min()
                 ymax = ydata_all.max()
                 y_range = ymax - ymin
-                yedge = y_range*edgeratio
-                ax.set_ylim([ymin-yedge, ymax+yedge])
 
+                # log axes, if desired:
+                if setloglog==True:
+                    ax.set_yscale('log')
+                    ax.set_ylim([ymin,ymax])
 
-            # log axes, if desired:
-            if setloglog==True:
-                ax.set_xscale('log')
+                else:
+                    yedge = y_range*edgeratio
+                    ax.set_ylim([ymin-yedge, ymax+yedge])
 
             # set x_lim (including for the hue variable row):
             xmin = xdata_all.min()
             xmax = xdata_all.max()
             x_range = xmax - xmin
 
-            xedge = x_range*edgeratio
-        #            plt.xlim(xmin-xedge,xmax+xedge)
-            ax.set_xlim([xmin-xedge, xmax+xedge])
-            print 'col:%s, row:%s, xmin: %s, xmax: %s, xedge: %s, ' % (cols[iC], cols[iR], xmin, xmax, xedge)
+            # log axes, if desired:
+            if setloglog==True:
+                ax.set_xscale('log')
+                ax.set_xlim([xmin, xmax])
+
+            else:
+                xedge = x_range*edgeratio
+                ax.set_xlim([xmin-xedge, xmax+xedge])
+
+#            print 'col:%s, row:%s, xmin: %s, xmax: %s, xedge: %s, ' % (cols[iC], cols[iR], xmin, xmax, xedge)
 
             # labels:
             if (iC==0) & (iR < Ncols-1):
-                plt.ylabel(cols[iR])
+                if rename_features:
+
+                    plt.ylabel(feature_names([cols[iR]])[0])
+                else:
+                    plt.ylabel(cols[iR])
+
             if iR==Ncols-1:
-                plt.xlabel(cols[iC])
+                if rename_features:
+                    plt.xlabel(feature_names([cols[iC]])[0])
+                else:
+                    plt.xlabel(cols[iC])
 
 #       fig.tight_layout()
 #    return fig, ax, xmin, xmax, xedge
